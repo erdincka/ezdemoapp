@@ -21,3 +21,12 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Credentials files
+aws.json
+azure.json
+vmware.json
+# generated files
+hosts.ini
+temp.pem
+yarn.lock

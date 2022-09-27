@@ -1,0 +1,9 @@
+---
+- name: check host
+  hosts: target
+  gather_facts: true
+
+  tasks:
+    - name: ansible_facts
+      debug:
+        var: ansible_facts
