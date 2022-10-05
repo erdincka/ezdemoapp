@@ -20,7 +20,8 @@ const AmiParams = {
   ],
 };
 
-export const configureClient = (accessKeyId, secretAccessKey, region) => {
+export const configureClient = async (accessKeyId, secretAccessKey, region) => {
+  if (region === "") return null;
   AWS.config.update({
     region,
     credentials: {
@@ -28,11 +29,22 @@ export const configureClient = (accessKeyId, secretAccessKey, region) => {
       secretAccessKey,
     },
   });
-  const client = new AWS.EC2({ apiVersion: "2016-11-15" });
-  return client;
+  try {
+    const client = new AWS.EC2({ apiVersion: "2016-11-15" });
+    const checkClient = await getRegions(client);
+    // console.dir(checkClient);
+    if (checkClient) return client;
+    else return null;
+  } catch (error) {
+    console.error(error);
+    return null;
+  } finally {
+    // console.dir('DONE: getAMIs');
+  }
 };
 
 export const getAMIs = async (ec2client) => {
+  if (!ec2client) return null;
   try {
     const data = await ec2client.describeImages(AmiParams).promise();
     return data.Images;
@@ -45,11 +57,12 @@ export const getAMIs = async (ec2client) => {
 };
 
 export const getRegions = async (ec2client) => {
+  if (!ec2client) return null;
   try {
     const data = await ec2client.describeRegions({}).promise();
     return data.Regions;
   } catch (error) {
-    console.dir(error);
+    console.error(error);
     return null;
   } finally {
     // console.dir('DONE: getRegions');
@@ -57,6 +70,7 @@ export const getRegions = async (ec2client) => {
 };
 
 export const getKeyPairs = async (ec2client) => {
+  if (!ec2client) return null;
   var params = {
     IncludePublicKey: true,
   };
@@ -64,16 +78,40 @@ export const getKeyPairs = async (ec2client) => {
     const data = await ec2client.describeKeyPairs(params).promise();
     return data.KeyPairs;
   } catch (error) {
-    console.dir(error);
+    console.error(error);
     return null;
   } finally {
     // console.dir('DONE: getKeyPairs');
   }
 };
 
+const getDefaultVpc = async (ec2client) => {
+  if (!ec2client) return null;
+  const params = {
+    Filters: [
+      {
+        Name: "is-default",
+        Values: ["true"],
+      },
+    ],
+  };
+  const data = await ec2client.describeVpcs(params).promise();
+  return data.Vpcs[0];
+};
+
 export const getSecurityGroups = async (ec2client) => {
+  if (!ec2client) return null;
+  const defaultVpc = await getDefaultVpc(ec2client);
+  const params = {
+    Filters: [
+      {
+        Name: "vpc-id",
+        Values: [defaultVpc.VpcId],
+      },
+    ],
+  };
   try {
-    const data = await ec2client.describeSecurityGroups({}).promise();
+    const data = await ec2client.describeSecurityGroups(params).promise();
     return data.SecurityGroups;
   } catch (error) {
     console.dir(error);
@@ -84,7 +122,8 @@ export const getSecurityGroups = async (ec2client) => {
 };
 
 export const getInstances = async (ec2client) => {
-  const allowedImageIds = (await getAMIs(ec2client)).map((ami) => ami.ImageId);
+  if (!ec2client) return null;
+  const allowedImageIds = (await getAMIs(ec2client))?.map((ami) => ami.ImageId);
   var params = {
     Filters: [
       {
@@ -110,7 +149,7 @@ export const getInstances = async (ec2client) => {
     }
     return null;
   } catch (error) {
-    console.dir(error);
+    console.error(error);
     return null;
   } finally {
     // console.dir('DONE: getInstances');
@@ -118,11 +157,13 @@ export const getInstances = async (ec2client) => {
 };
 
 export const createInstance = async (ec2client, request) => {
+  if (!ec2client) return null;
+  if (!request) return null;
   var instanceParams = {
     ImageId: request.ami.ImageId,
     InstanceType: "t2.micro",
     KeyName: request.keypair.KeyName,
-    SecurityGroups: [request.securitygroup.GroupName],
+    SecurityGroupIds: [request.securitygroup.GroupId],
     MinCount: 1,
     MaxCount: 1,
     BlockDeviceMappings: [
@@ -164,5 +205,24 @@ export const createInstance = async (ec2client, request) => {
     return null;
   } finally {
     // console.dir('DONE: createInstance');
+  }
+};
+
+export const waitForInstanceOk = async (ec2client, request) => {
+  if (!ec2client) return null;
+  if (!request) return null;
+  var params = {
+    InstanceIds: [request.InstanceId],
+  };
+  try {
+    const data = await ec2client.waitFor("instanceStatusOk", params).promise();
+    if (data?.InstanceStatuses.length > 0) {
+      return request; // return the instance
+    }
+  } catch (error) {
+    console.dir(error);
+    return null;
+  } finally {
+    // console.dir('DONE: waitForInstanceOk');
   }
 };

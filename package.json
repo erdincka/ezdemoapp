@@ -53,7 +53,8 @@
     "electron": "^20.1.4",
     "electron-builder": "^23.3.3",
     "electronmon": "^2.0.2",
-    "prettier": "^2.7.1"
+    "prettier": "^2.7.1",
+    "react-devtools": "^4.26.0"
   },
   "electronmon": {
     "patterns": [

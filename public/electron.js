@@ -1,6 +1,6 @@
 const { app, BrowserWindow, protocol, ipcMain } = require("electron");
 const path = require("path");
-const isDev = require('electron-is-dev');
+const isDev = require("electron-is-dev");
 
 // Create the native browser window.
 function createWindow() {
@@ -14,14 +14,14 @@ function createWindow() {
     },
   });
 
-    mainWindow.loadURL(
+  mainWindow.loadURL(
     isDev
-      ? 'http://localhost:3000'
-      : `file://${path.join(__dirname, '../build/index.html')}`
+      ? "http://localhost:3000"
+      : `file://${path.join(__dirname, "../build/index.html")}`
   );
   // Open the DevTools.
   if (isDev) {
-    mainWindow.webContents.openDevTools({ mode: 'attach' });
+    mainWindow.webContents.openDevTools({ mode: "attach" });
   }
 }
 
@@ -57,12 +57,20 @@ app.whenReady().then(() => {
   });
 
   // Define IPC calls here
-  const { ansiblePlay, pythonExec, getCredentials, saveCredentials } = require('./apiCommands');
-  ipcMain.on('ansible', ansiblePlay);
-  ipcMain.on('python', pythonExec);
-  ipcMain.handle('save_credentials', saveCredentials);
-  ipcMain.handle('read_credentials', getCredentials);
-
+  const {
+    ansiblePlay,
+    pythonExec,
+    getCredentials,
+    saveCredentials,
+    getPrivateKey,
+    savePrivateKey,
+  } = require("./apiCommands");
+  ipcMain.on("ansible", ansiblePlay);
+  ipcMain.on("python", pythonExec);
+  ipcMain.handle("save_credentials", saveCredentials);
+  ipcMain.handle("read_credentials", getCredentials);
+  ipcMain.handle("read_privatekey", getPrivateKey);
+  ipcMain.handle("save_privatekey", savePrivateKey);
 });
 
 // Quit when all windows are closed, except on macOS.

@@ -1,63 +1,51 @@
-import React, { Fragment } from "react";
-import { Anchor, Box, Footer, Text } from "grommet";
-import { StatusCritical, StatusGood } from "grommet-icons";
+import React from "react";
+import { Box, Button, Footer, Text } from "grommet";
+import { Hpe } from "grommet-icons";
 
-export const FooterWithActions = (props) => {
-  const { error } = props.params;
+const footerButtons = [
+  {
+    label: "Learn",
+    href: "//learn.ezmeral.software.hpe.com/",
+  },
+  {
+    label: "Workshop",
+    href: "//hackshack.hpedev.io/workshops",
+  },
+  {
+    label: "Demo",
+    href: "//www.hpe.com/demos/ezmeral",
+  },
+];
+
+export const GlobalFooter = () => {
+  const year = new Date().getFullYear();
+
   return (
-    <Box justify="end">
-      <Box
-        direction="row"
-        justify="between"
-        border="between"
-        gap="xsmall"
-        margin="xsmall"
-      >
-        <Anchor
-          href="https://learn.ezmeral.software.hpe.com/"
-          label="Discover"
-          target="_blank"
-        />
-        <Anchor
-          href="https://hackshack.hpedev.io/workshops"
-          label="Experience"
-          target="_blank"
-        />
-        <Anchor
-          href="https://www.hpe.com/demos/ezmeral"
-          label="Show"
-          target="_blank"
-        />
+    <Footer
+      background="background"
+      direction="row-responsive"
+      pad={{ horizontal: "medium", vertical: "small" }}
+      wrap
+    >
+      <Box direction="row" gap="medium">
+        <Hpe color="plain" />
+        <Text size="small">
+          © {year} Hewlett Packard Enterprise Development LP
+        </Text>
       </Box>
-
-      <Footer background="brand" pad="xsmall">
-        <Fragment>
-          {error.length > 0 ? (
-            <StatusCritical color="status-critical" />
-          ) : (
-            <StatusGood color="status-ok" />
-          )}
-          {error.length > 0 && (
-            <Box basis="small">
-              <Text truncate="tip" color="red">
-                {error}
-              </Text>
-            </Box>
-          )}
-        </Fragment>
-        <Box direction="row">
-          <Text wordBreak="keep-all" margin={{ right: "small" }}>
-            HPE Ezmeral @2022{" "}
-          </Text>
-          <Anchor
-            label="About"
-            href="https://github.com/hewlettpackard/ezdemo"
+      <Box align="center" direction="row" wrap>
+        {footerButtons.map((button, index) => (
+          <Button
+            key={index}
+            label={button.label}
+            href={button.href}
+            rel="noopener"
             target="_blank"
           />
-        </Box>
-      </Footer>
-    </Box>
+        ))}
+      </Box>
+    </Footer>
   );
 };
 
-export default FooterWithActions;
+export default GlobalFooter;

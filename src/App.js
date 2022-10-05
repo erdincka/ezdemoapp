@@ -1,51 +1,57 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useMemo, useState } from "react";
 import {
   Grommet,
   Button,
-  Tabs,
-  Tab,
-  Page,
-  Text,
-  NameValueList,
-  NameValuePair,
+  ResponsiveContext,
+  Box,
+  PageHeader,
+  Notification,
 } from "grommet";
 import { hpe } from "grommet-theme-hpe";
 import { Console, Book, Moon, Sun } from "grommet-icons";
-import { HeaderWithActions } from "./Header";
-import { FooterWithActions } from "./Footer";
-import { Output } from "./Output";
-import InstanceCheck from "./InstanceCheck";
-import DataFabric from "./DataFabric";
-import MLOps from "./MLOps";
+import { GlobalHeader } from "./Header";
+import { GlobalFooter } from "./Footer";
+import { AppContext } from "./ContextProviders";
+import DataFabric from "./libs/DataFabric";
 
 function App() {
   const [theme, setTheme] = useState("dark");
-  const [mode, setMode] = useState("demo");
+  const [learning, setLearning] = useState(false);
+  const size = useContext(ResponsiveContext);
   const [output, setOutput] = useState([]);
   const [error, setError] = useState([]);
-  // ie, "aws": { "accessKeyId": "", "secretAccessKey": "", "region": "" }
-  const [credentials, setCredentials] = useState({});
-  const [client, setClient] = useState();
-  const [instance, setInstance] = useState();
 
-  const isLearning = mode === "learn";
-
-  // Subscribe to channels for outputs and errors
   useEffect(() => {
     const outputListener = (data) => {
       setOutput([...output, data]);
     };
+    window.ezdemoAPI.getOutput((data) => outputListener(data));
+  }, [output]);
+
+  // Subscribe to channels for errors
+  useEffect(() => {
     const errorListener = (data) => {
       setError([...error, data]);
     };
-    window.ezdemoAPI.getOutput((data) => outputListener(data));
     window.ezdemoAPI.getError((data) => errorListener(data));
-  }, [error, output]);
+  }, [error]);
+
+  const contextValue = useMemo(
+    () => ({
+      learning,
+      setLearning,
+      output,
+      setOutput,
+      error,
+      setError,
+    }),
+    [learning, error, output]
+  );
 
   // Component functions
   const themeButton = (
     <Button
-      tip="Switch Theme"
+      tip={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
       key="theme"
       icon={theme === "dark" ? <Moon /> : <Sun />}
       onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
@@ -54,60 +60,61 @@ function App() {
 
   const modeButton = (
     <Button
-      tip={mode + " mode"}
+      tip="Demo/Learn Mode"
       key="mode"
-      icon={mode === "demo" ? <Console /> : <Book />}
-      onClick={() => setMode(mode === "demo" ? "learn" : "demo")}
+      icon={learning ? <Book /> : <Console />}
+      onClick={() => setLearning(!learning)}
     />
   );
 
   return (
     <Grommet theme={hpe} themeMode={theme} full>
-      <Page>
-        <HeaderWithActions buttons={[modeButton, themeButton]} />
-        <Tabs justify="start" margin="small">
-          <Tab title="Data Fabric">
-            <DataFabric
-              isLearning={isLearning}
-              client={client}
-              setClient={setClient}
-              instance={instance}
-              setInstance={setInstance}
-              credentials={credentials}
-              setCredentials={setCredentials}
+      <AppContext.Provider value={contextValue}>
+        <Box width={{ max: "xxlarge" }} margin="auto" fill>
+          <GlobalHeader buttons={[modeButton, themeButton]} />
+          {error.length > 0 && (
+            <Notification
+              status="critical"
+              onClose={() => {
+                setError([]);
+              }}
+              message={error}
+              global
             />
-          </Tab>
-          <Tab title="MLOps">
-            <MLOps />
-          </Tab>
-        </Tabs>
-        {instance && (
-          <Tabs justify="start" margin="small">
-            <Tab title="Instance">
-              <NameValueList>
-                <NameValuePair name="Name">
-                  <Text color="text-strong">
-                    {instance.Tags.filter((t) => t.Key === "Name").map(
-                      (t) => t.Value
-                    )}
-                  </Text>
-                </NameValuePair>
-                <NameValuePair name="IP Address">
-                  <Text color="text-strong">{instance.PublicIpAddress}</Text>
-                </NameValuePair>
-              </NameValueList>
-              <InstanceCheck instance={instance} />
-            </Tab>
-            <Tab title={output.length > 0 ? "Stdout *" : "Stdout"}>
-              <Output output={output} />
-            </Tab>
-            <Tab title={error.length > 0 ? "Stderr *" : "Stderr"}>
-              <Output output={error} />
-            </Tab>
-          </Tabs>
-        )}
-        <FooterWithActions params={{ error }} />
-      </Page>
+          )}
+
+          <Box overflow="auto">
+            <Box
+              background="background"
+              justify="center"
+              pad={{
+                horizontal: !["xsmall", "small"].includes(size)
+                  ? "xlarge"
+                  : "medium",
+                vertical: "large",
+              }}
+              flex={false}
+            >
+              <Box gap="large">
+                {learning ? (
+                  <PageHeader
+                    title="Learn by doing"
+                    subtitle="Try it yourself, on your own environment, in your own pace"
+                  />
+                ) : (
+                  <PageHeader
+                    title="Demo"
+                    subtitle="Setup and run your own live Ezmeral demos"
+                  />
+                )}
+              </Box>
+
+              <DataFabric />
+            </Box>
+          </Box>
+          <GlobalFooter />
+        </Box>
+      </AppContext.Provider>
     </Grommet>
   );
 }

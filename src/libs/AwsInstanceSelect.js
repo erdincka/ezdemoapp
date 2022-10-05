@@ -1,11 +1,17 @@
-import { Box, Text, Select, FormField } from "grommet";
-import { useEffect, useState } from "react";
+import { Box, List, Text } from "grommet";
+import { Redhat, Ubuntu } from "grommet-icons";
+import { useContext, useEffect, useState } from "react";
+import { ClientContext, InstanceContext } from "../ContextProviders";
+import { AwsInstanceCreate } from "./AwsInstanceCreate";
 import { getInstances } from "./ec2Client";
+import { getInstanceName } from "./Utils";
+import { WizardContext } from "./Wizard";
 
-function AwsInstanceSelect(props) {
+export function AwsInstanceSelect() {
   const [instances, setInstances] = useState();
-  const [value, setValue] = useState();
-  const { client, instance, callback } = props;
+  const { client } = useContext(ClientContext);
+  const { instance, setInstance } = useContext(InstanceContext);
+  const { setValid } = useContext(WizardContext);
 
   useEffect(() => {
     const queryAsync = async () => {
@@ -14,38 +20,97 @@ function AwsInstanceSelect(props) {
     queryAsync();
   }, [client]);
 
-  const onSelect = (data) => {
-    setValue(data);
-    callback(data);
-  };
+  useEffect(() => {
+    const queryAsync = async () => {
+      if (instance) {
+        setInstances(await getInstances(client));
+        setValid(true);
+      } else setValid(false);
+    };
+    queryAsync();
+  }, [client, instance, setValid]);
+
+  // // if eligible instances found, select the first
+  // useEffect(() => {
+  //   if (instances?.length > 0) setInstance(instances[0]);
+  // }, [instances, setInstance]);
+
+  // // if instance is selected, close the new form
+  // useEffect(() => {
+  //   if (instance) setNewOpen(false);
+  // }, [instance]);
 
   return (
-    <Box margin="medium">
-      {!(instances || instance) && (
-        <Text>No eligible instance to use, create new one</Text>
-      )}
+    <Box margin="small" fill>
+      {/* {instances && (
+        <DataTable
+          data={instances}
+          columns={[
+            {
+              property: "PlatformDetails",
+              header: "OS",
+              render: (i) =>
+                i.PlatformDetails === "Linux/UNIX" ? (
+                  <Ubuntu size="medium" color="plain" />
+                ) : (
+                  <Redhat size="medium" color="plain" />
+                ),
+              pin: ["xsmall", "small"].includes(size),
+            },
+            {
+              property: "name",
+              header: "Name",
+              primary: true,
+              render: (i) => getInstanceName(i),
+              pin: ["xsmall", "small"].includes(size),
+            },
+            {
+              property: "PublicIpAddress",
+              header: "IP Address",
+              pin: ["xsmall", "small"].includes(size),
+            },
+            {
+              property: "CpuOptions.CoreCount",
+              header: "Cores",
+              pin: ["xsmall", "small"].includes(size),
+            },
+          ]}
+          fill
+          onClickRow={({ datum }) => console.dir(datum)}
+        />
+      )} */}
       {instances && (
-        <FormField
-          name="instance"
-          htmlFor="instance"
-          label="Select Instance"
-          required
-          margin="small"
+        <List
+          alignSelf="stretch"
+          // background="background-front"
+          data={instances}
+          onClickItem={(e) => {
+            setInstance(e.item);
+          }}
         >
-          <Select
-            id="instance"
-            name="instance"
-            options={instances || []}
-            clear
-            onChange={({ value }) => {
-              onSelect(value);
-            }}
-            value={value}
-            labelKey="InstanceId"
-            valueKey="InstanceId"
-          />
-        </FormField>
+          {(item, index, { active }) => (
+            <Box direction="row" gap="small" key={index} align="between">
+              <Box width="xxsmall" height="xxsmall">
+                {item.PlatformDetails === "Linux/UNIX" ? (
+                  <Ubuntu size="medium" color="plain" />
+                ) : (
+                  <Redhat size="medium" color="plain" />
+                )}
+              </Box>
+              <Box align="left">
+                <Text weight="bold" color={!active ? "text-weak" : null}>
+                  {getInstanceName(item)} ({item.InstanceId})
+                </Text>
+                <Text color={!active ? "text-weak" : null}>
+                  {item.PublicIpAddress}
+                </Text>
+              </Box>
+            </Box>
+          )}
+        </List>
       )}
+      <Text weight="bold">Create new instance:</Text>
+      <AwsInstanceCreate client={client} setInstance={setInstance} />
     </Box>
   );
 }

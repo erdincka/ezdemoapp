@@ -1,43 +1,53 @@
 import { Box, Button, Form, FormField, TextInput } from "grommet";
-import { useEffect, useState } from "react";
+import { StatusCriticalSmall, StatusGoodSmall } from "grommet-icons";
+import { useContext, useEffect, useState } from "react";
+import { ClientContext } from "../ContextProviders";
 import { configureClient } from "./ec2Client";
+import { WizardContext } from "./Wizard";
 
-function AWSCredentials(props) {
-  const [value, setValue] = useState({
+export function AWSCredentials() {
+  const nullCredentials = {
     accessKeyId: "",
     secretAccessKey: "",
     region: "",
-  });
+  };
+
+  const [credentials, setCredentials] = useState(nullCredentials);
+  const { client, setClient } = useContext(ClientContext);
+  const { setValid } = useContext(WizardContext);
 
   useEffect(() => {
     window.ezdemoAPI
       .getCredentials("aws")
       .then((c) => {
         if (c) {
-          setValue(JSON.parse(c));
+          setCredentials(JSON.parse(c));
         }
       })
       .catch((e) => console.error(e));
   }, []);
 
-  const saveCredentials = () => {
-    const credentials = { aws: value };
-    const ec2client = configureClient(
-      value.accessKeyId,
-      value.secretAccessKey,
-      value.region
-    );
-    props.save(credentials, ec2client);
-  };
+  useEffect(() => {
+    configureClient(
+      credentials.accessKeyId,
+      credentials.secretAccessKey,
+      credentials.region
+    )
+      .then((res) => {
+        setClient(res);
+        if (res) setValid(true);
+      })
+      .catch((error) => console.error(error));
+  }, [setClient, credentials, setValid]);
 
   return (
     <Form
-      value={value}
-      onChange={(nextValue) => setValue(nextValue)}
-      onSubmit={(data) => {
-        saveCredentials();
-      }}
+      value={credentials}
+      onChange={setCredentials}
+      onSubmit={({ value }) => window.ezdemoAPI.saveCredentials(value)}
+      onReset={() => setCredentials(nullCredentials)}
       validate="blur"
+      direction="row"
     >
       <FormField
         name="accessKeyId"
@@ -55,7 +65,11 @@ function AWSCredentials(props) {
         required
         margin="small"
       >
-        <TextInput id="secretAccessKey" name="secretAccessKey" />
+        <TextInput
+          id="secretAccessKey"
+          name="secretAccessKey"
+          type="password"
+        />
       </FormField>
       <FormField
         name="region"
@@ -67,7 +81,23 @@ function AWSCredentials(props) {
         <TextInput id="region" name="region" />
       </FormField>
       <Box direction="row" gap="medium">
-        <Button type="submit" primary label="Save" />
+        {/* <Button type="submit" primary label="Save" />
+        <Button type="reset" label="Clear" /> */}
+        {client ? (
+          <Button
+            plain
+            disabled
+            icon={<StatusGoodSmall color="status-ok" />}
+            label="Valid credentials"
+          />
+        ) : (
+          <Button
+            plain
+            disabled
+            icon={<StatusCriticalSmall color="status-critical" />}
+            label="Invalid credentials"
+          />
+        )}
       </Box>
     </Form>
   );

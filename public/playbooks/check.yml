@@ -4,6 +4,6 @@
   gather_facts: true
 
   tasks:
-    - name: ansible_facts
-      debug:
-        var: ansible_facts
+    - debug: msg="total_swap_mb={{ ansible_memory_mb.swap.total }}"
+    - debug: msg="total_memory_mb={{ ansible_memory_mb.real.total }}"
+    # - debug: var=hostvars[inventory_hostname].ansible_devices

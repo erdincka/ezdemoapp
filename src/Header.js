@@ -1,40 +1,25 @@
-import React, { } from 'react';
-import {
-  Box,
-  Header,
-  Text,
-} from 'grommet';
-import {
-  Hpe,
-} from 'grommet-icons';
+import React, { useContext } from "react";
+import { Box, Header, ResponsiveContext } from "grommet";
+import { AppIdentity } from "./AppIdentity";
 
-export const HeaderWithActions = (props) => (
-  <Header
-    border={{ color: 'border-weak', side: 'bottom' }}
-    fill="horizontal"
-    pad={{ horizontal: 'medium', vertical: 'small' }}
-  >
-    <Box
-      direction="row"
-      align="start"
-      gap="medium"
-      // pad maintains accessible hit target
-      // non-responsive maintains same dimensions for mobile
-      pad={{ vertical: 'small' }}
-      responsive={false}
+export const GlobalHeader = ({ buttons }) => {
+  const size = useContext(ResponsiveContext);
+  return (
+    <Header
+      align="center"
+      background="background"
+      border={{ color: "border-weak", side: "bottom" }}
+      justify="between"
+      fill="horizontal"
+      pad={{
+        horizontal: !["xsmall", "small"].includes(size) ? "medium" : "small",
+        vertical: "small",
+      }}
     >
-      <Hpe color="brand" />
-      <Box direction="row" gap="xsmall" wrap>
-        <Text color="text-strong" weight="bold">
-          HPE
-        </Text>
-        <Text color="text-strong">EzDemo</Text>
-      </Box>
-    </Box>
-    <Box direction="row">
-      { props.buttons }
-    </Box>
-  </Header>
-);
+      <AppIdentity title="Ezdemo" brand="hpe" />
+      <Box direction="row">{buttons}</Box>
+    </Header>
+  );
+};
 
-export default HeaderWithActions;
+export default GlobalHeader;

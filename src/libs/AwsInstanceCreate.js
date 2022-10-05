@@ -1,18 +1,34 @@
-import { Box, Button, Form, FormField, Select, TextInput } from "grommet";
+import {
+  Box,
+  Button,
+  Form,
+  FormField,
+  Select,
+  Spinner,
+  TextInput,
+  Tip,
+} from "grommet";
 import { useEffect, useState } from "react";
 import {
   createInstance,
   getAMIs,
   getKeyPairs,
   getSecurityGroups,
+  waitForInstanceOk,
 } from "./ec2Client";
 
-function AwsInstanceCreate(props) {
-  const [value, setValue] = useState({ ami: {}, name: "", keypair: {} });
+export function AwsInstanceCreate(props) {
+  const [value, setValue] = useState({
+    ami: {},
+    name: "",
+    keypair: {},
+    securitygroup: {},
+  });
+  const [spinner, setSpinner] = useState(false);
   const [images, setImages] = useState();
   const [keypairs, setKeyPairs] = useState();
   const [securitygroups, setSecurityGroups] = useState();
-  const { client, callback } = props;
+  const { client, setInstance } = props;
 
   useEffect(() => {
     const queryAsync = async () => {
@@ -24,14 +40,17 @@ function AwsInstanceCreate(props) {
   }, [client]);
 
   const onSubmit = async (data) => {
+    setSpinner(true);
     const instance = await createInstance(client, data);
-    callback(instance);
+    const waitInstance = await waitForInstanceOk(client, instance);
+    setInstance(waitInstance);
+    setSpinner(false);
   };
 
   return (
     <Form
       value={value}
-      onChange={(nextValue) => setValue(nextValue)}
+      onChange={setValue}
       onSubmit={(event) => onSubmit(event.value)}
       validate="blur"
     >
@@ -79,12 +98,24 @@ function AwsInstanceCreate(props) {
           id="securitygroup"
           name="securitygroup"
           options={securitygroups || []}
-          valueKey="GroupName"
-          labelKey="GroupName"
+          valueKey="GroupId"
+          labelKey={(sg) =>
+            sg.GroupName + " (" + sg.GroupId + "): " + sg.Description
+          }
         />
       </FormField>
       <Box direction="row" gap="medium">
-        <Button type="submit" primary label="Create" disabled={!client} />
+        <Button
+          type="submit"
+          primary
+          label={spinner ? "Wait for Instance" : "Create"}
+          disabled={!client || spinner}
+        />
+        {spinner && (
+          <Tip content="Wait while instance becomes ready">
+            <Spinner color="brand" message="Wait for Instance" />
+          </Tip>
+        )}
       </Box>
     </Form>
   );
