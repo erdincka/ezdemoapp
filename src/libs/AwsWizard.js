@@ -10,34 +10,39 @@ import { InstanceSetup } from "./InstanceSetup";
 
 const steps = [
   {
-    description: "Enter credentials.",
-    inputs: <AWSCredentials />,
     title: "Credentials",
-    nextText: "Select Instance",
+    description: "",
+    inputs: <AWSCredentials />,
+    nextText: "Next",
+    waitingText: "Credentials not verified",
   },
   {
-    description: "Select an Instance.",
+    title: "Installation Target",
+    description: "",
     inputs: <AwsInstanceSelect />,
-    title: "Instance",
     nextText: "Verify",
+    waitingText: "No target is selected",
   },
   {
-    description: "Verify the Instance.",
-    inputs: <InstancePrecheck />,
     title: "Verify",
+    description: "Check resources",
+    inputs: <InstancePrecheck />,
     nextText: "Start Installation",
+    waitingText: "Pre-check validation...",
   },
   {
-    description: "Start Installation.",
-    inputs: <InstanceInstall />,
     title: "Install",
+    description: "",
+    inputs: <InstanceInstall />,
     nextText: "Setup Cluster",
+    waitingText: "Waiting for install...",
   },
   {
+    title: "Setup",
     description: "Setup the Cluster.",
     inputs: <InstanceSetup />,
-    title: "Setup",
-    nextText: "Close the Wizard and Continue...",
+    nextText: "Finished",
+    waitingText: "Waiting for post-install setup...",
   },
 ];
 

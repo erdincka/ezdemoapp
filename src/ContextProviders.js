@@ -1,8 +1,12 @@
 import { createContext } from "react";
 
 export const AppContext = createContext({
-  mode: "",
-  setMode: () => {},
+  learning: Boolean,
+  setLearning: () => {},
+  output: [],
+  setOutput: () => {},
+  error: [],
+  setError: () => {},
 });
 
 export const ClientContext = createContext({

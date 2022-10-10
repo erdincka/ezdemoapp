@@ -4,52 +4,35 @@
   gather_facts: true
   vars:
     mapr_repo: "https://package.mapr.hpe.com/releases"
-    mapr_disk_size: "10 GiB"
-    cluster_name: "demo.datafabric.io"
+    cluster_name: "demo.df.io"
     admin_password: "mapr"
 
   tasks:
-    - name: clean up /etc/hosts
-      lineinfile:
-        path: /etc/hosts
-        regexp: "ip6-|IPv6|::1|127.0.1.1"
-        # regexp: '127.0.1.1'
-        state: absent
+    - name: set uid for /sbin/unix_chkpwd
+      file:
+        path: /sbin/unix_chkpwd
+        mode: "u+s"
       become: true
       when: ansible_facts['os_family'] == 'Debian'
 
-    - name: set umask for installer
-      lineinfile:
-        path: /etc/login.defs
-        regexp: "^UMASK"
-        line: UMASK      0022
-      become: true
-      when: ansible_facts['os_family'] == 'Debian'
+    # - name: update packages
+    #   apt:
+    #     name: "*"
+    #     state: latest
+    #     update_cache: true
+    #   become: true
+    #   when: ansible_facts['os_family'] == 'Debian'
 
-    - name: Ensure the locale exists
-      locale_gen:
-        name: en_US.UTF-8
-        state: present
-      become: true
-      when: ansible_facts['os_family'] == 'Debian'
+    # - name: Check if reboot required
+    #   stat:
+    #     path: /var/run/reboot-required
+    #   register: reboot_required_file
+    #   when: ansible_facts['os_family'] == 'Debian'
 
-    - name: set default locale to en_US
-      shell: sudo localectl set-locale LANG=en_US.utf8
-      become: true
-      when: ansible_facts['os_family'] == 'Debian'
-
-    - name: update packages
-      apt:
-        name: "*"
-        state: latest
-        update_cache: true
-      become: true
-      when: ansible_facts['os_family'] == 'Debian'
-
-    - name: Install prerequisites
-      package: name="dnsutils, iputils-arping, netcat, nfs-common, ntp, ntpdate, sdparm, syslinux, sysstat, wamerican, rpcbind, gnupg2, python, syslinux-utils" state=present
-      become: true
-      when: ansible_facts['os_family'] == 'Debian'
+    # - name: Reboot if required
+    #   reboot:
+    #   when: ansible_facts['os_family'] == 'Debian' and reboot_required_file.stat.exists == true
+    #   become: true
 
     - name: get mapr installer
       get_url:
@@ -65,18 +48,20 @@
       become: true
       when: not installer.stat.exists
 
-    - shell: "fdisk -l | grep {{ mapr_disk_size }} | cut -d' ' -f2 | tr -d ':'"
+    - name: get available disks
+      shell: |
+        export DISKS=$(fdisk -l | grep 'Disk /dev/' | grep -v loop | cut -d' ' -f2 | tr -d :)
+        export PARTS=$(fdisk -l | grep -e '^/dev/[a-z0-9]' | cut -d' ' -f1)
+        for d in ${DISKS}; do if [[ "${PARTS}" != "$d"* ]] ; then echo $d; fi; done
       register: mapr_disks
+      args:
+        executable: /bin/bash
       become: true
-
-    - name: get node name
-      set_fact:
-        mapr_hosts: "{{ groups['target'] | map ('extract', hostvars, 'ansible_fqdn') }}"
 
     - name: copy ssh key file
       copy:
         src: "{{ inventory_dir }}/temp.pem"
-        dest: "{{ ansible_user_dir }}/temp_pem"
+        dest: "{{ ansible_user_dir }}/key.pem"
         mode: "0600"
 
     - set_fact:
@@ -84,26 +69,20 @@
           environment:
             mapr_core_version: 7.0.0
           config:
-            admin_id: mapr
-            cluster_name: "{{ cluster_name }}"
-            db_admin_password_set: true
-            db_admin_password: {{ admin_password }}
-            db_admin_user: root
-            debug_set: false
-            elasticsearch_path: /opt/mapr/es_db
-            enable_encryption_at_rest: true
-            enable_min_metrics_collection: true
-            enable_nfs: true
             hosts:
-              {{ mapr_hosts | to_nice_yaml | indent(4) }}
-            license_type: M7
-            log_admin_password: {{ admin_password }}
-            mep_version: 8.1.0
-            metrics_ui_admin_password: {{ admin_password }}
-            nfs_type: "NFSv4"
-            security: true
+              {{ groups['target'] | map ('extract', hostvars, 'ansible_fqdn') | to_nice_yaml | indent(4) }}
             ssh_id: {{ ansible_user_id }}
-            ssh_key_file: "{{ ansible_user_dir }}/temp.pem"
+            ssh_key_file: {{ ansible_user_dir }}/key.pem
+            cluster_name: {{ cluster_name }}
+            cluster_admin_id: mapr
+            cluster_admin_password: {{ admin_password }}
+            db_admin_user: root
+            db_admin_password: {{ admin_password }}
+            log_admin_password: {{ admin_password }}
+            metrics_ui_admin_password: {{ admin_password }}
+            enable_encryption_at_rest: true
+            license_type: M7
+            mep_version: 8.1.0
             disks:
               {{ mapr_disks.stdout_lines | to_nice_yaml | indent(4) }}
             disk_format: true
@@ -116,8 +95,6 @@
                   name: hive
                   user: hive
                   password: {{ admin_password }}
-              mapr-hue-livy:
-                    enabled: true
               mapr-grafana:
                 enabled: true
               mapr-opentsdb:
@@ -125,9 +102,9 @@
               mapr-collectd:
               mapr-fluentd:
               mapr-kibana:
-                enabled: true
+                enabled: True
               mapr-elasticsearch:
-                enabled: true
+                enabled: True
               mapr-data-access-gateway:
               mapr-mastgateway:
 
@@ -135,19 +112,19 @@
       copy:
         dest: /tmp/mapr.stanza
         content: "{{ stanza_file }}"
-      register: stanza
 
-    - name: wait for services and install from stanza
+    - name: wait for instal - this will take a while
       shell: "sleep 30; echo y | sudo /opt/mapr/installer/bin/mapr-installer-cli install -nv -t /tmp/mapr.stanza"
-      # when: stanza.changed
-      register: first_install
+      register: install_run
       failed_when:
-        - first_install.rc != 0
-        - "'Install is not required' not in first_install.stderr"
+        - install_run.rc != 0
+        - "'Install is not required' not in install_run.stderr"
 
-    - name: copy the license
-      copy: src="../../LatestDemoLicense-M7.txt" dest="/tmp/LatestDemoLicense-M7.txt" mode="0644"
-      ignore_errors: true
+    - debug: var=install_run
+
+    # - name: copy the license
+    #   copy: src="../../LatestDemoLicense-M7.txt" dest="/tmp/LatestDemoLicense-M7.txt" mode="0644"
+    #   ignore_errors: true
 
     - name: wait for DF services to come up
       wait_for:
@@ -155,16 +132,16 @@
       delegate_to: localhost
 
     - name: create ticket for user
-      shell: "[ -f /tmp/maprticket_1000 ] || (echo mapr | maprlogin password -user mapr)"
+      shell: "[ -f /tmp/maprticket_${UID} ] || (echo {{ admin_password }} | maprlogin password -user mapr)"
 
     - name: create ticket for root
-      shell: "[ -f /tmp/maprticket_0 ] || (echo mapr | sudo maprlogin password -user mapr)"
+      shell: "[ -f /tmp/maprticket_0 ] || (echo {{ admin_password }} | sudo maprlogin password -user mapr)"
 
-    - name: install mapr license
-      shell: |
-        [ -f /tmp/LatestDemoLicense-M7.txt ] && maprcli license add -license /tmp/LatestDemoLicense-M7.txt -is_file true
-      ignore_errors: true
-      register: licensed
-      failed_when:
-        - licensed.rc != 0
-        - "'license exists' not in licensed.stdout"
+    # - name: install mapr license
+    #   shell: |
+    #     [ -f /tmp/LatestDemoLicense-M7.txt ] && maprcli license add -license /tmp/LatestDemoLicense-M7.txt -is_file true
+    #   ignore_errors: true
+    #   register: licensed
+    #   failed_when:
+    #     - licensed.rc != 0
+    #     - "'license exists' not in licensed.stdout"

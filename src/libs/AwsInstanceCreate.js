@@ -1,14 +1,6 @@
-import {
-  Box,
-  Button,
-  Form,
-  FormField,
-  Select,
-  Spinner,
-  TextInput,
-  Tip,
-} from "grommet";
-import { useEffect, useState } from "react";
+import { Box, Button, Form, FormField, Select, TextInput } from "grommet";
+import { useContext, useEffect, useState } from "react";
+import { ClientContext, InstanceContext } from "../ContextProviders";
 import {
   createInstance,
   getAMIs,
@@ -24,27 +16,31 @@ export function AwsInstanceCreate(props) {
     keypair: {},
     securitygroup: {},
   });
-  const [spinner, setSpinner] = useState(false);
+  const [ready, setReady] = useState(true);
   const [images, setImages] = useState();
   const [keypairs, setKeyPairs] = useState();
   const [securitygroups, setSecurityGroups] = useState();
-  const { client, setInstance } = props;
+
+  const { client } = useContext(ClientContext);
+  const { setInstance } = useContext(InstanceContext);
 
   useEffect(() => {
     const queryAsync = async () => {
-      if (client) setImages(await getAMIs(client));
-      if (client) setKeyPairs(await getKeyPairs(client));
-      if (client) setSecurityGroups(await getSecurityGroups(client));
+      if (client) {
+        setImages(await getAMIs(client));
+        setKeyPairs(await getKeyPairs(client));
+        setSecurityGroups(await getSecurityGroups(client));
+      }
     };
     queryAsync();
   }, [client]);
 
   const onSubmit = async (data) => {
-    setSpinner(true);
+    setReady(false);
     const instance = await createInstance(client, data);
     const waitInstance = await waitForInstanceOk(client, instance);
     setInstance(waitInstance);
-    setSpinner(false);
+    setReady(true);
   };
 
   return (
@@ -54,7 +50,14 @@ export function AwsInstanceCreate(props) {
       onSubmit={(event) => onSubmit(event.value)}
       validate="blur"
     >
-      <FormField name="ami" htmlFor="ami" label="AMI" required margin="small">
+      <FormField
+        name="ami"
+        htmlFor="ami"
+        label="Image / OS"
+        required
+        margin="small"
+        width="medium"
+      >
         <Select
           id="ami"
           name="ami"
@@ -69,6 +72,7 @@ export function AwsInstanceCreate(props) {
         label="Instance Name"
         required
         margin="small"
+        width="medium"
       >
         <TextInput id="name" name="name" />
       </FormField>
@@ -78,6 +82,7 @@ export function AwsInstanceCreate(props) {
         label="KeyPair"
         required
         margin="small"
+        width="medium"
       >
         <Select
           id="keypair"
@@ -93,6 +98,7 @@ export function AwsInstanceCreate(props) {
         label="Security Group"
         required
         margin="small"
+        width="medium"
       >
         <Select
           id="securitygroup"
@@ -108,14 +114,9 @@ export function AwsInstanceCreate(props) {
         <Button
           type="submit"
           primary
-          label={spinner ? "Wait for Instance" : "Create"}
-          disabled={!client || spinner}
+          label={ready ? "Create" : "Wait for Instance..."}
+          disabled={!client || !ready}
         />
-        {spinner && (
-          <Tip content="Wait while instance becomes ready">
-            <Spinner color="brand" message="Wait for Instance" />
-          </Tip>
-        )}
       </Box>
     </Form>
   );

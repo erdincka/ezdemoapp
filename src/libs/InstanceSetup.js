@@ -1,27 +1,22 @@
 import { Box, Button, Text } from "grommet";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useState } from "react";
 import InstancePrecheck from "./InstancePrecheck";
 import { badIcon, goodIcon } from "./Utils";
-import Output from "../Output";
 import InstanceInstall from "./InstanceInstall";
-import { InstanceContext } from "../ContextProviders";
+import { AppContext, InstanceContext } from "../ContextProviders";
+import { LogViewer } from "../LogViewer";
 
 export function InstanceSetup() {
-  const [output, setOutput] = useState([]);
   const [precheckOpen, setPrecheckOpen] = useState(false);
   const [installOpen, setInstallOpen] = useState(false);
   const [precheckStatus, setPrecheckStatus] = useState(false);
   const [installStatus, setInstallStatus] = useState(false);
 
+  const { output } = useContext(AppContext);
+
   // const { instance } = props;
   const { instance } = useContext(InstanceContext);
 
-  useEffect(() => {
-    const outputListener = (data) => {
-      setOutput([...output, data]);
-    };
-    window.ezdemoAPI.getOutput((data) => outputListener(data));
-  }, [output]);
   // Output data capture
   const re = /TASK [ezdemo_out] \*(.*)PLAY RECAP \*/;
   const ansible_output = output?.map((l) => l.replace(/\n$/g, "").match(re));
@@ -55,7 +50,7 @@ export function InstanceSetup() {
       />
       {/* <pre>{JSON.stringify(instance, null, 2)}</pre> */}
       {JSON.stringify(ansible_output)}
-      <Output output={output} />
+      <LogViewer lines={output} />
     </Box>
   );
 }

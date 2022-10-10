@@ -1,9 +1,20 @@
 ---
 - name: check host
   hosts: target
+  # vars:
+  #   mapr_disk_size: "10 GiB"
   gather_facts: true
 
   tasks:
-    - debug: msg="total_swap_mb={{ ansible_memory_mb.swap.total }}"
-    - debug: msg="total_memory_mb={{ ansible_memory_mb.real.total }}"
-    # - debug: var=hostvars[inventory_hostname].ansible_devices
+    - debug: msg="total_memory_mb={{ ansible_memory_mb.real.total }} total_swap_mb={{ ansible_memory_mb.swap.total }}"
+
+    - shell: |
+        export DISKS=$(fdisk -l | grep 'Disk /dev/' | grep -v loop | cut -d' ' -f2 | tr -d :)
+        export PARTS=$(fdisk -l | grep -e '^/dev/[a-z0-9]' | cut -d' ' -f1)
+        for d in ${DISKS}; do if [[ "${PARTS}" != "$d"* ]] ; then echo $d; fi; done
+      register: mapr_disks
+      args:
+        executable: /bin/bash
+      become: true
+
+    - debug: msg="available_disks={{ mapr_disks.stdout }}"

@@ -21,19 +21,18 @@ function App() {
   const [output, setOutput] = useState([]);
   const [error, setError] = useState([]);
 
+  // Subscribe to channels for output
   useEffect(() => {
-    const outputListener = (data) => {
-      setOutput([...output, data]);
-    };
-    window.ezdemoAPI.getOutput((data) => outputListener(data));
+    const processOutput = (data) => setOutput((old) => [...old, data]);
+    const removeListener = window.ezdemoAPI.receive("output", processOutput);
+    return () => removeListener();
   }, [output]);
 
   // Subscribe to channels for errors
   useEffect(() => {
-    const errorListener = (data) => {
-      setError([...error, data]);
-    };
-    window.ezdemoAPI.getError((data) => errorListener(data));
+    const processError = (data) => setError((old) => [...old, data]);
+    const removeListener = window.ezdemoAPI.receive("error", processError);
+    return () => removeListener();
   }, [error]);
 
   const contextValue = useMemo(
@@ -78,7 +77,7 @@ function App() {
               onClose={() => {
                 setError([]);
               }}
-              message={error}
+              message={error.join("\n")}
               global
             />
           )}

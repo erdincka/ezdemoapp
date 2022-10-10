@@ -23,18 +23,20 @@ export const DataFabricSetup = () => {
       description: "Use AWS instances",
       icon: <Amazon color="plain" />,
       cta: () => setShowProvider("aws"),
+      disabled: false,
     },
     {
       title: "Vmware vSphere",
       description: "Use vSphere/vCloud VMs",
       icon: <Vmware color="plain" />,
       cta: () => setShowProvider("vmware"),
+      disabled: true,
     },
   ];
 
   return (
     <Box direction="row">
-      {data.map(({ icon, title, description, cta }, index) => (
+      {data.map(({ icon, title, description, cta, disabled }, index) => (
         <Card key={index} margin="small">
           <CardBody gap="small" align="start" flex="grow">
             {icon}
@@ -42,7 +44,12 @@ export const DataFabricSetup = () => {
               {title}
             </Text>
             <Text color="text-weak">{description}</Text>
-            <Button label="Select" secondary onClick={cta} />
+            <Button
+              label="Select"
+              secondary
+              onClick={cta}
+              disabled={disabled}
+            />
           </CardBody>
         </Card>
       ))}

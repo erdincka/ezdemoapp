@@ -1,5 +1,5 @@
 import React, { useContext } from "react";
-import { Box, Button, Footer, ResponsiveContext, Spinner } from "grommet";
+import { Box, Button, Footer, ResponsiveContext } from "grommet";
 import { FormNextLink } from "grommet-icons";
 import { WizardContext } from ".";
 
@@ -41,12 +41,12 @@ export const StepFooter = ({ onSubmit, valid }) => {
           primary
           reverse
           disabled={!valid}
-          // label={activeIndex === steps.length - 1 ? "Finish Wizard" : "Next"}
-          label={steps[activeIndex].nextText}
+          label={
+            valid ? steps[activeIndex].nextText : steps[activeIndex].waitingText
+          }
           form={`${id}-form`}
           onClick={handleSubmit}
         />
-        {!valid && <Spinner message="Wait while validating..." />}
       </Footer>
     </Box>
   );

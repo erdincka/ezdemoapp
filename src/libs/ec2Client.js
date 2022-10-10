@@ -161,7 +161,7 @@ export const createInstance = async (ec2client, request) => {
   if (!request) return null;
   var instanceParams = {
     ImageId: request.ami.ImageId,
-    InstanceType: "t2.micro",
+    InstanceType: "m5a.4xlarge",
     KeyName: request.keypair.KeyName,
     SecurityGroupIds: [request.securitygroup.GroupId],
     MinCount: 1,
@@ -171,7 +171,7 @@ export const createInstance = async (ec2client, request) => {
         DeviceName: "/dev/sda1",
         Ebs: {
           DeleteOnTermination: true,
-          VolumeSize: 120,
+          VolumeSize: 150,
           VolumeType: "gp2",
         },
       },
@@ -179,7 +179,7 @@ export const createInstance = async (ec2client, request) => {
         DeviceName: "xvdh",
         Ebs: {
           DeleteOnTermination: true,
-          VolumeSize: 10,
+          VolumeSize: 100,
           VolumeType: "gp2",
         },
       },

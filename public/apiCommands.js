@@ -24,11 +24,11 @@ exports.ansiblePlay = (event, args) => {
   var command = new Ansible.Playbook()
     .inventory(hosts_ini_file)
     .playbook(`${cwd}/public/playbooks/${playbook}`)
-    .variables(vars);
-  // .verbose("v");
+    .variables(vars)
+    .verbose("v");
 
   command.on("stdout", (data) => {
-    // console.log(`STDOUT: ${data}`);
+    console.log(`STDOUT: ${data.toString()}`);
     event.sender.send("output", data.toString());
   });
   command.on("stderr", (data) => {

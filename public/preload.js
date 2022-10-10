@@ -11,12 +11,15 @@ contextBridge.exposeInMainWorld("ezdemoAPI", {
   saveCredentials: (data) => ipcRenderer.invoke("save_credentials", data),
   getPrivateKey: () => ipcRenderer.invoke("read_privatekey", []),
   savePrivateKey: (data) => ipcRenderer.invoke("save_privatekey", data),
-  getOutput: (callback) =>
-    ipcRenderer.on("output", (_, data) => {
-      callback(data);
-    }),
-  getError: (callback) =>
-    ipcRenderer.on("error", (_, data) => {
-      callback(data);
-    }),
+  receive: (channel, func) => {
+    let validChannels = ["output", "error"];
+    if (validChannels.includes(channel)) {
+      // Deliberately strip event as it includes `sender`
+      const subscription = (event, ...args) => func(...args);
+      ipcRenderer.on(channel, subscription);
+      return () => {
+        ipcRenderer.removeListener(channel, subscription);
+      };
+    }
+  },
 });

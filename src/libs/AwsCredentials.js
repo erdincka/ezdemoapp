@@ -1,5 +1,4 @@
-import { Box, Button, Form, FormField, TextInput } from "grommet";
-import { StatusCriticalSmall, StatusGoodSmall } from "grommet-icons";
+import { Form, FormField, TextInput } from "grommet";
 import { useContext, useEffect, useState } from "react";
 import { ClientContext } from "../ContextProviders";
 import { configureClient } from "./ec2Client";
@@ -13,7 +12,7 @@ export function AWSCredentials() {
   };
 
   const [credentials, setCredentials] = useState(nullCredentials);
-  const { client, setClient } = useContext(ClientContext);
+  const { setClient } = useContext(ClientContext);
   const { setValid } = useContext(WizardContext);
 
   useEffect(() => {
@@ -36,6 +35,7 @@ export function AWSCredentials() {
       .then((res) => {
         setClient(res);
         if (res) setValid(true);
+        else setValid(false);
       })
       .catch((error) => console.error(error));
   }, [setClient, credentials, setValid]);
@@ -54,6 +54,7 @@ export function AWSCredentials() {
         htmlFor="accessKeyId"
         label="Access Key"
         required
+        width="medium"
         margin="small"
       >
         <TextInput id="accessKeyId" name="accessKeyId" />
@@ -80,25 +81,6 @@ export function AWSCredentials() {
       >
         <TextInput id="region" name="region" />
       </FormField>
-      <Box direction="row" gap="medium">
-        {/* <Button type="submit" primary label="Save" />
-        <Button type="reset" label="Clear" /> */}
-        {client ? (
-          <Button
-            plain
-            disabled
-            icon={<StatusGoodSmall color="status-ok" />}
-            label="Valid credentials"
-          />
-        ) : (
-          <Button
-            plain
-            disabled
-            icon={<StatusCriticalSmall color="status-critical" />}
-            label="Invalid credentials"
-          />
-        )}
-      </Box>
     </Form>
   );
 }
