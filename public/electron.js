@@ -1,12 +1,13 @@
 const { app, BrowserWindow, protocol, ipcMain } = require("electron");
 const path = require("path");
 const isDev = require("electron-is-dev");
+const url = require("url");
 
 // Create the native browser window.
 function createWindow() {
   const mainWindow = new BrowserWindow({
-    width: 1100,
-    height: 600,
+    width: 1024,
+    height: 800,
     // Set the path of an additional "preload" script that can be used to
     // communicate between node-land and browser-land.
     webPreferences: {
@@ -17,7 +18,11 @@ function createWindow() {
   mainWindow.loadURL(
     isDev
       ? "http://localhost:3000"
-      : `file://${path.join(__dirname, "../build/index.html")}`
+      : url.format({
+          pathname: path.join(__dirname, "../build/index.html"), // relative path to the HTML-file
+          protocol: "file:",
+          slashes: true,
+        })
   );
   // Open the DevTools.
   if (isDev) {
@@ -56,6 +61,23 @@ app.whenReady().then(() => {
     }
   });
 
+  // Enable connecting to self-signed certificates
+  app.on(
+    "certificate-error",
+    (event, webContents, url, error, certificate, callback) => {
+      if (
+        url.includes("https://") &&
+        (url.includes(":9443") || url.includes(":8443"))
+      ) {
+        // Verification logic.
+        event.preventDefault();
+        callback(true);
+      } else {
+        callback(false);
+      }
+    }
+  );
+
   // Define IPC calls here
   const {
     ansiblePlay,
@@ -63,14 +85,12 @@ app.whenReady().then(() => {
     getCredentials,
     saveCredentials,
     getPrivateKey,
-    savePrivateKey,
   } = require("./apiCommands");
   ipcMain.on("ansible", ansiblePlay);
   ipcMain.on("python", pythonExec);
   ipcMain.handle("save_credentials", saveCredentials);
   ipcMain.handle("read_credentials", getCredentials);
   ipcMain.handle("read_privatekey", getPrivateKey);
-  ipcMain.handle("save_privatekey", savePrivateKey);
 });
 
 // Quit when all windows are closed, except on macOS.

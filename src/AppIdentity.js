@@ -1,7 +1,8 @@
 import React, { forwardRef, useContext } from "react";
 import PropTypes from "prop-types";
-import { Button, Box, ResponsiveContext, Text } from "grommet";
+import { Button, Box, Text } from "grommet";
 import { Hpe } from "grommet-icons";
+import { AppContext } from "./ContextProviders";
 
 const hpe = {
   name: "HPE",
@@ -10,8 +11,7 @@ const hpe = {
 
 export const AppIdentity = forwardRef(
   ({ brand, href, logoOnly, title, ...rest }, ref) => {
-    const size = useContext(ResponsiveContext);
-
+    const { size } = useContext(AppContext);
     return (
       <Box
         align="center"

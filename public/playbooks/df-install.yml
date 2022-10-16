@@ -15,25 +15,6 @@
       become: true
       when: ansible_facts['os_family'] == 'Debian'
 
-    # - name: update packages
-    #   apt:
-    #     name: "*"
-    #     state: latest
-    #     update_cache: true
-    #   become: true
-    #   when: ansible_facts['os_family'] == 'Debian'
-
-    # - name: Check if reboot required
-    #   stat:
-    #     path: /var/run/reboot-required
-    #   register: reboot_required_file
-    #   when: ansible_facts['os_family'] == 'Debian'
-
-    # - name: Reboot if required
-    #   reboot:
-    #   when: ansible_facts['os_family'] == 'Debian' and reboot_required_file.stat.exists == true
-    #   become: true
-
     - name: get mapr installer
       get_url:
         url: "{{ mapr_repo}}/installer/mapr-setup.sh"
@@ -113,23 +94,35 @@
         dest: /tmp/mapr.stanza
         content: "{{ stanza_file }}"
 
-    - name: wait for instal - this will take a while
-      shell: "sleep 30; echo y | sudo /opt/mapr/installer/bin/mapr-installer-cli install -nv -t /tmp/mapr.stanza"
+    - name: wait for Installer
+      wait_for:
+        port: 9443
+
+    - name: install started - this will take a while
+      shell: "echo y | sudo /opt/mapr/installer/bin/mapr-installer-cli install -nv -t /tmp/mapr.stanza"
       register: install_run
       failed_when:
         - install_run.rc != 0
         - "'Install is not required' not in install_run.stderr"
 
-    - debug: var=install_run
+    - name: copy the license
+      copy: src="{{ inventory_dir }}/LatestDemoLicense-M7.txt" dest="/tmp/LatestDemoLicense-M7.txt" mode="0644"
+      ignore_errors: true
 
-    # - name: copy the license
-    #   copy: src="../../LatestDemoLicense-M7.txt" dest="/tmp/LatestDemoLicense-M7.txt" mode="0644"
-    #   ignore_errors: true
-
-    - name: wait for DF services to come up
+    - name: wait for MCS
       wait_for:
-        timeout: 300
-      delegate_to: localhost
+        port: 8443
+
+    - name: get host public IP
+      shell: "curl http://ifconfig.me"
+      register: public_ip
+
+    - name: set public IP
+      shell: |
+        grep -v "MAPR_EXTERNAL" /opt/mapr/conf/env_override.sh | tee /opt/mapr/conf/env_override.sh
+        echo "export MAPR_EXTERNAL={{ public_ip.stdout }}" | tee -a /opt/mapr/conf/env_override.sh
+        /opt/mapr/server/configure.sh -R
+      become: true
 
     - name: create ticket for user
       shell: "[ -f /tmp/maprticket_${UID} ] || (echo {{ admin_password }} | maprlogin password -user mapr)"
@@ -137,11 +130,11 @@
     - name: create ticket for root
       shell: "[ -f /tmp/maprticket_0 ] || (echo {{ admin_password }} | sudo maprlogin password -user mapr)"
 
-    # - name: install mapr license
-    #   shell: |
-    #     [ -f /tmp/LatestDemoLicense-M7.txt ] && maprcli license add -license /tmp/LatestDemoLicense-M7.txt -is_file true
-    #   ignore_errors: true
-    #   register: licensed
-    #   failed_when:
-    #     - licensed.rc != 0
-    #     - "'license exists' not in licensed.stdout"
+    - name: install mapr license
+      shell: |
+        [ -f /tmp/LatestDemoLicense-M7.txt ] && maprcli license add -license /tmp/LatestDemoLicense-M7.txt -is_file true
+      ignore_errors: true
+      register: licensed
+      failed_when:
+        - licensed.rc != 0
+        - "'license exists' not in licensed.stdout"

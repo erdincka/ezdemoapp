@@ -1,18 +1,16 @@
 import { Form, FormField, TextInput } from "grommet";
 import { useContext, useEffect, useState } from "react";
-import { ClientContext } from "../ContextProviders";
+import { AwsContext } from "../ContextProviders";
 import { configureClient } from "./ec2Client";
 import { WizardContext } from "./Wizard";
 
 export function AWSCredentials() {
-  const nullCredentials = {
+  const [credentials, setCredentials] = useState({
     accessKeyId: "",
     secretAccessKey: "",
     region: "",
-  };
-
-  const [credentials, setCredentials] = useState(nullCredentials);
-  const { setClient } = useContext(ClientContext);
+  });
+  const { setClient } = useContext(AwsContext);
   const { setValid } = useContext(WizardContext);
 
   useEffect(() => {
@@ -32,21 +30,21 @@ export function AWSCredentials() {
       credentials.secretAccessKey,
       credentials.region
     )
-      .then((res) => {
-        setClient(res);
-        if (res) setValid(true);
-        else setValid(false);
+      .then((client) => {
+        if (client) {
+          setClient(client);
+          window.ezdemoAPI.saveCredentials({ aws: credentials });
+          setValid(true);
+        }
       })
       .catch((error) => console.error(error));
-  }, [setClient, credentials, setValid]);
+  }, [credentials, setClient, setValid]);
 
   return (
     <Form
       value={credentials}
       onChange={setCredentials}
-      onSubmit={({ value }) => window.ezdemoAPI.saveCredentials(value)}
-      onReset={() => setCredentials(nullCredentials)}
-      validate="blur"
+      validate="submit"
       direction="row"
     >
       <FormField

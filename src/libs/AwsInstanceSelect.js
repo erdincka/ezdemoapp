@@ -1,75 +1,95 @@
-import { Box, List, Text } from "grommet";
+import { Box, Heading, List, Text } from "grommet";
 import { Redhat, Ubuntu } from "grommet-icons";
 import { useContext, useEffect, useState } from "react";
-import { ClientContext, InstanceContext } from "../ContextProviders";
-import { AwsInstanceCreate } from "./AwsInstanceCreate";
-import { getInstances } from "./ec2Client";
-import { getInstanceName } from "./Utils";
+import { AppContext, AwsContext } from "../ContextProviders";
+import { getInstances, getInstanceName } from "./ec2Client";
 import { WizardContext } from "./Wizard";
+import { AwsInstanceCreate } from "./AwsInstanceCreate";
 
 export function AwsInstanceSelect() {
   const [instances, setInstances] = useState();
-  const { client } = useContext(ClientContext);
-  const { instance, setInstance } = useContext(InstanceContext);
   const { setValid } = useContext(WizardContext);
-
-  useEffect(() => {
-    setValid(instance ? true : false);
-  }, [instance, setValid]);
+  const { size, setConnection } = useContext(AppContext);
+  const { client } = useContext(AwsContext);
 
   useEffect(() => {
     const queryAsync = async () => {
       if (client) setInstances(await getInstances(client));
     };
     queryAsync();
-  }, [client]);
+    setValid(false); // clean previous state
+  }, [client, setValid]);
 
-  useEffect(() => {
-    const queryAsync = async () => {
-      if (instance) {
-        setInstances(await getInstances(client));
-        setValid(true);
-      }
+  const handleSelect = (instance) => {
+    // get instance details and set the connection
+    const newConnection = {
+      address: instance.PublicIpAddress,
+      username:
+        instance.PlatformDetails === "Linux/UNIX" ? "ubuntu" : "ec2-user",
+      privatekey: null,
+      instance,
     };
-    queryAsync();
-  }, [client, instance, setValid]);
+    setConnection(newConnection);
+    setValid(true);
+  };
+
+  const instance_icon = (i) =>
+    i.PlatformDetails === "Linux/UNIX" ? (
+      <Ubuntu size="medium" color="plain" />
+    ) : (
+      <Redhat size="medium" color="plain" />
+    );
 
   return (
-    <Box margin="small" fill>
+    <Box gap="small">
+      <Heading level={5}>Existing</Heading>
       {instances && (
         <List
           data={instances}
-          onClickItem={(e) => {
-            setInstance(e.item);
-          }}
-        >
-          {(item, index, { active }) => (
-            <Box
-              direction="row"
-              gap="small"
-              key={index}
-              align="between"
-              width="medium"
-            >
-              {item.PlatformDetails === "Linux/UNIX" ? (
-                <Ubuntu size="medium" color="plain" />
-              ) : (
-                <Redhat size="medium" color="plain" />
+          pad="small"
+          action={(item, index) => (
+            <Box key={index} direction="row" align="center" gap="medium">
+              {!["xsmall", "small"].includes(size) && (
+                <Text
+                  weight="bold"
+                  size="xsmall"
+                  color={!item.verified ? "text-weak" : null}
+                ></Text>
               )}
-              <Text weight="bold" color={!active ? "text-weak" : null}>
-                {getInstanceName(item)}
-              </Text>
-              <Text color={!active ? "text-weak" : null}>
-                {item.InstanceId}
-              </Text>
-              <Text color={!active ? "text-weak" : null}>
-                {item.PublicIpAddress}
-              </Text>
+            </Box>
+          )}
+          onClickItem={(e) => handleSelect(e.item)}
+          margin={
+            ["xsmall", "small"].includes(size) ? { bottom: "large" } : undefined
+          }
+        >
+          {(instance, index) => (
+            <Box
+              key={index}
+              gap="medium"
+              direction="row"
+              align="center"
+              justify="between"
+            >
+              <Box alignSelf="center">{instance_icon(instance)}</Box>
+              <Box align="center" gap="medium">
+                <Box>
+                  <Text
+                    weight="bold"
+                    color={!instance.verified ? "text-weak" : null}
+                  >
+                    {getInstanceName(instance)}
+                  </Text>
+                  <Text color={!instance.verified ? "text-weak" : null}>
+                    {instance.PublicIpAddress}
+                  </Text>
+                </Box>
+              </Box>
             </Box>
           )}
         </List>
       )}
-      <Text weight="bold">Create new instance:</Text>
+      <Heading level={5}>New</Heading>
       <AwsInstanceCreate />
     </Box>
   );

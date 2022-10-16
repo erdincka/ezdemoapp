@@ -6,9 +6,7 @@ import { AwsWizard } from "./AwsWizard";
 
 export const DataFabricSetup = () => {
   const [showProvider, setShowProvider] = useState("");
-  // const [provider, setProvider] = useState();
   const [client, setClient] = useState();
-  // const [instance, setInstace] = useState();
 
   const clientContextValue = useMemo(
     () => ({
@@ -66,7 +64,7 @@ export const DataFabricSetup = () => {
               {showProvider === "aws" && (
                 <AwsWizard closer={() => setShowProvider("")} />
               )}
-            </Box>{" "}
+            </Box>
           </ClientContext.Provider>
         </Layer>
       )}

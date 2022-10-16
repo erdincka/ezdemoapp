@@ -7,14 +7,16 @@ export const AppContext = createContext({
   setOutput: () => {},
   error: [],
   setError: () => {},
+  connection: {},
+  setConnection: () => {},
 });
 
-export const ClientContext = createContext({
+export const AwsContext = createContext({
   client: {},
   setClient: () => {},
 });
 
-export const InstanceContext = createContext({
-  instance: {},
-  setInstance: () => {},
-});
+// export const InstanceContext = createContext({
+//   instance: {},
+//   setInstance: () => {},
+// });

@@ -10,7 +10,6 @@ contextBridge.exposeInMainWorld("ezdemoAPI", {
     ipcRenderer.invoke("read_credentials", provider),
   saveCredentials: (data) => ipcRenderer.invoke("save_credentials", data),
   getPrivateKey: () => ipcRenderer.invoke("read_privatekey", []),
-  savePrivateKey: (data) => ipcRenderer.invoke("save_privatekey", data),
   receive: (channel, func) => {
     let validChannels = ["output", "error"];
     if (validChannels.includes(channel)) {

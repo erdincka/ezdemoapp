@@ -1,9 +1,10 @@
-import React, { useContext } from "react";
-import { Box, Header, ResponsiveContext } from "grommet";
+import { Box, Header } from "grommet";
+import { useContext } from "react";
 import { AppIdentity } from "./AppIdentity";
+import { AppContext } from "./ContextProviders";
 
 export const GlobalHeader = ({ buttons }) => {
-  const size = useContext(ResponsiveContext);
+  const { size } = useContext(AppContext);
   return (
     <Header
       align="center"

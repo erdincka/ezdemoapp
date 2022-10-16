@@ -121,6 +121,25 @@ export const getSecurityGroups = async (ec2client) => {
   }
 };
 
+export const getInstance = async (ec2client, instanceId) => {
+  if (!ec2client) return null;
+  var params = {
+    InstanceIds: [instanceId],
+  };
+  try {
+    const data = await ec2client.describeInstances(params).promise();
+    if (data.Reservations.length > 0) {
+      return data.Reservations.map((res) => res.Instances).flat()[0]; // return first result
+    }
+    return null;
+  } catch (error) {
+    console.error(error);
+    return null;
+  } finally {
+    // console.dir('DONE: getInstances');
+  }
+};
+
 export const getInstances = async (ec2client) => {
   if (!ec2client) return null;
   const allowedImageIds = (await getAMIs(ec2client))?.map((ami) => ami.ImageId);
@@ -217,7 +236,7 @@ export const waitForInstanceOk = async (ec2client, request) => {
   try {
     const data = await ec2client.waitFor("instanceStatusOk", params).promise();
     if (data?.InstanceStatuses.length > 0) {
-      return request; // return the instance
+      return await getInstance(ec2client, request.InstanceId); // return the instance details
     }
   } catch (error) {
     console.dir(error);
@@ -226,3 +245,6 @@ export const waitForInstanceOk = async (ec2client, request) => {
     // console.dir('DONE: waitForInstanceOk');
   }
 };
+
+export const getInstanceName = (instance) =>
+  instance.Tags.filter((t) => t.Key === "Name").map((t) => t.Value);

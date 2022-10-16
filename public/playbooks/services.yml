@@ -1,0 +1,8 @@
+---
+- name: check services
+  hosts: target
+  gather_facts: true
+
+  tasks:
+    - name: Populate service facts
+      service_facts:

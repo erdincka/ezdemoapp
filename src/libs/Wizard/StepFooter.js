@@ -1,18 +1,17 @@
 import React, { useContext } from "react";
-import { Box, Button, Footer, ResponsiveContext } from "grommet";
+import { Box, Button, Footer } from "grommet";
 import { FormNextLink } from "grommet-icons";
 import { WizardContext } from ".";
+import { AppContext } from "../../ContextProviders";
 
-export const StepFooter = ({ onSubmit, valid }) => {
-  const size = useContext(ResponsiveContext);
+export const StepFooter = ({ valid }) => {
   const { activeIndex, setActiveIndex, id, steps, width } =
     useContext(WizardContext);
+  const { size } = useContext(AppContext);
 
   const handleSubmit = (event) => {
     if (activeIndex < steps.length - 1) {
       setActiveIndex(activeIndex + 1);
-    } else if (onSubmit) {
-      onSubmit(event);
     }
   };
 
@@ -36,17 +35,21 @@ export const StepFooter = ({ onSubmit, valid }) => {
         alignSelf="center"
         width={width}
       >
-        <Button
-          icon={<FormNextLink />}
-          primary
-          reverse
-          disabled={!valid}
-          label={
-            valid ? steps[activeIndex].nextText : steps[activeIndex].waitingText
-          }
-          form={`${id}-form`}
-          onClick={handleSubmit}
-        />
+        {activeIndex !== steps.length - 1 && (
+          <Button
+            icon={<FormNextLink />}
+            primary
+            reverse
+            disabled={!valid}
+            label={
+              valid
+                ? steps[activeIndex].nextText
+                : steps[activeIndex].waitingText
+            }
+            form={`${id}-form`}
+            onClick={handleSubmit}
+          />
+        )}
       </Footer>
     </Box>
   );

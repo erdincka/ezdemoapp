@@ -1,26 +1,23 @@
 import React, { useContext, useEffect, useMemo, useState } from "react";
-import {
-  Grommet,
-  Button,
-  ResponsiveContext,
-  Box,
-  PageHeader,
-  Notification,
-} from "grommet";
+import { Grommet, Button, ResponsiveContext, Box, PageHeader } from "grommet";
 import { hpe } from "grommet-theme-hpe";
-import { Console, Book, Moon, Sun } from "grommet-icons";
+import { Console, Book, Moon, Sun, Code, AppsRounded } from "grommet-icons";
 import { GlobalHeader } from "./Header";
 import { GlobalFooter } from "./Footer";
 import { AppContext } from "./ContextProviders";
-import DataFabric from "./libs/DataFabric";
+import { DataFabric } from "./DataFabric";
+import { errorBar } from "./libs/Utils";
+import { LogViewer } from "./LogViewer";
 
 function App() {
-  const [theme, setTheme] = useState("dark");
   const [learning, setLearning] = useState(false);
-  const size = useContext(ResponsiveContext);
+  const [theme, setTheme] = useState("dark");
+  const [debug, setDebug] = useState(false);
   const [output, setOutput] = useState([]);
   const [error, setError] = useState([]);
+  const [connection, setConnection] = useState({});
 
+  const size = useContext(ResponsiveContext);
   // Subscribe to channels for output
   useEffect(() => {
     const processOutput = (data) => setOutput((old) => [...old, data]);
@@ -37,14 +34,18 @@ function App() {
 
   const contextValue = useMemo(
     () => ({
+      size,
       learning,
       setLearning,
       output,
       setOutput,
       error,
       setError,
+      connection,
+      setConnection,
+      debug,
     }),
-    [learning, error, output]
+    [size, learning, error, output, connection, debug]
   );
 
   // Component functions
@@ -66,21 +67,21 @@ function App() {
     />
   );
 
+  const debugButton = (
+    <Button
+      tip="Advanced / Basic"
+      key="debug"
+      icon={debug ? <Code /> : <AppsRounded />}
+      onClick={() => setDebug(!debug)}
+    />
+  );
+
   return (
     <Grommet theme={hpe} themeMode={theme} full>
       <AppContext.Provider value={contextValue}>
         <Box width={{ max: "xxlarge" }} margin="auto" fill>
-          <GlobalHeader buttons={[modeButton, themeButton]} />
-          {error.length > 0 && (
-            <Notification
-              status="critical"
-              onClose={() => {
-                setError([]);
-              }}
-              message={error.join("\n")}
-              global
-            />
-          )}
+          <GlobalHeader buttons={[debugButton, modeButton, themeButton]} />
+          {errorBar(error, setError)}
 
           <Box overflow="auto">
             <Box
@@ -102,15 +103,18 @@ function App() {
                   />
                 ) : (
                   <PageHeader
-                    title="Demo"
-                    subtitle="Setup and run your own live Ezmeral demos"
+                    title="Demo Mode"
+                    subtitle="Try and demo Ezmeral live"
                   />
                 )}
               </Box>
 
               <DataFabric />
+              {/* <MLOps /> */}
+              {debug && <LogViewer lines={output} />}
             </Box>
           </Box>
+
           <GlobalFooter />
         </Box>
       </AppContext.Provider>

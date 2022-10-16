@@ -1,12 +1,11 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import PropTypes from "prop-types";
 import { Box } from "grommet";
-import { WizardContext, WizardHeader, StepContent, StepFooter } from "./Wizard";
+import { WizardContext, StepContent, StepFooter } from "./Wizard";
 import { AWSCredentials } from "./AwsCredentials";
 import { AwsInstanceSelect } from "./AwsInstanceSelect";
-import { InstancePrecheck } from "./InstancePrecheck";
-import { InstanceInstall } from "./InstanceInstall";
-import { InstanceSetup } from "./InstanceSetup";
+import { AwsContext } from "../ContextProviders";
+import { ServerConnect } from "./ServerConnect";
 
 const steps = [
   {
@@ -17,48 +16,31 @@ const steps = [
     waitingText: "Credentials not verified",
   },
   {
-    title: "Installation Target",
+    title: "Instance",
     description: "",
     inputs: <AwsInstanceSelect />,
-    nextText: "Verify",
-    waitingText: "No target is selected",
+    nextText: "Connect",
+    waitingText: "Select an instance",
   },
   {
-    title: "Verify",
-    description: "Check resources",
-    inputs: <InstancePrecheck />,
-    nextText: "Start Installation",
-    waitingText: "Pre-check validation...",
-  },
-  {
-    title: "Install",
+    title: "Connect",
     description: "",
-    inputs: <InstanceInstall />,
-    nextText: "Setup Cluster",
-    waitingText: "Waiting for install...",
-  },
-  {
-    title: "Setup",
-    description: "Setup the Cluster.",
-    inputs: <InstanceSetup />,
-    nextText: "Finished",
-    waitingText: "Waiting for post-install setup...",
+    inputs: <ServerConnect />,
+    nextText: "Finish",
+    waitingText: "Verify connection",
   },
 ];
 
-export const AwsWizard = ({ closer }) => {
-  // const size = useContext(ResponsiveContext);
+export const AwsWizard = () => {
   const [activeIndex, setActiveIndex] = useState(0);
-  // for readability, this is used to display numeric value of step on screen,
-  // such as step 1 of 3. it will always be one more than the active array index
   const [activeStep, setActiveStep] = useState(activeIndex + 1);
-
   // ref allows us to access the wizard container and ensure scroll position
   // is at the top as user advances between steps. useEffect is triggered
   // when the active step changes.
   const wizardRef = useRef();
 
   const [valid, setValid] = useState(false);
+  const [client, setClient] = useState();
 
   useEffect(() => {
     setActiveStep(activeIndex + 1);
@@ -67,7 +49,7 @@ export const AwsWizard = ({ closer }) => {
   const id = "sticky-header-wizard";
 
   // scroll to top of step when step changes
-  React.useEffect(() => {
+  useEffect(() => {
     const container = wizardRef.current;
     const header = document.querySelector(`#${id}`);
     container.scrollTop = -header.getBoundingClientRect().bottom;
@@ -84,20 +66,26 @@ export const AwsWizard = ({ closer }) => {
       steps,
       valid,
       setValid,
-      wizardTitle: "Select AWS Resources",
     }),
     [activeIndex, activeStep, valid]
   );
 
+  const AwsContextValue = useMemo(
+    () => ({
+      client,
+      setClient,
+    }),
+    [client]
+  );
+
   return (
     <WizardContext.Provider value={contextValue}>
-      <Box fill>
-        <WizardHeader closer={closer} />
-        <StepContent setValid={setValid} />
-        <StepFooter
-          onSubmit={(data) => console.log("onSubmit:", data)}
-          valid={valid}
-        />
+      <Box elevation="small" border="horizontal" margin="small">
+        {/* <WizardHeader closer={closer} /> */}
+        <AwsContext.Provider value={AwsContextValue}>
+          <StepContent setValid={setValid} />
+          <StepFooter valid={valid} />
+        </AwsContext.Provider>
       </Box>
     </WizardContext.Provider>
   );

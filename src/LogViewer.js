@@ -1,34 +1,32 @@
-import { Box, ThemeContext } from "grommet";
+import { Box, CheckBox, Heading, ThemeContext } from "grommet";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { prism } from "grommet-theme-hpe";
-import { useContext } from "react";
+import { useContext, useState } from "react";
 
 export const LogViewer = ({ lines }) => {
+  const [full, setFull] = useState(false);
   const theme = useContext(ThemeContext);
 
   return (
-    <Box elevation="small">
-      {/* <TextArea
-        readOnly
-        fill
-        resize
-        value={lines?.join("\n")}
-        size="xsmall"
-        style={{
-          whiteSpace: "pre",
-          fontFamily: "Consolas,Courier New,monospace",
-          fontSize: "small",
-        }}
-      /> */}
+    <Box style={{ fontSize: "small" }} height="medium">
+      <Box direction="row" justify="between" align="center">
+        <Heading level={4}>Task Output</Heading>
+        <CheckBox
+          reverse
+          pad="none"
+          label={full ? "Showing full log" : "Showing recent logs"}
+          checked={full}
+          onChange={(event) => setFull(event.target.checked)}
+          toggle
+        />
+      </Box>
       <SyntaxHighlighter
         style={theme.dark ? prism.dark : prism.light}
         wrapLongLines
         language="log"
       >
-        {lines?.join("\n")}
+        {full ? lines?.join("\n") : lines?.slice(-3).join("\n")}
       </SyntaxHighlighter>
     </Box>
   );
 };
-
-export default LogViewer;

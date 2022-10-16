@@ -1,12 +1,10 @@
 ---
-- name: check host
+- name: Data Fabric pre-install verification
   hosts: target
-  # vars:
-  #   mapr_disk_size: "10 GiB"
   gather_facts: true
 
   tasks:
-    - debug: msg="total_memory_mb={{ ansible_memory_mb.real.total }} total_swap_mb={{ ansible_memory_mb.swap.total }}"
+    - debug: msg="total_memory_mb={{ ansible_memory_mb.real.total | default(0) }} total_swap_mb={{ ansible_memory_mb.swap.total | default(0) }}"
 
     - shell: |
         export DISKS=$(fdisk -l | grep 'Disk /dev/' | grep -v loop | cut -d' ' -f2 | tr -d :)

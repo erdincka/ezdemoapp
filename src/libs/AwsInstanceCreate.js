@@ -1,6 +1,14 @@
-import { Box, Button, Form, FormField, Select, TextInput } from "grommet";
+import {
+  Box,
+  Button,
+  Form,
+  FormField,
+  Select,
+  Spinner,
+  TextInput,
+} from "grommet";
 import { useContext, useEffect, useState } from "react";
-import { ClientContext, InstanceContext } from "../ContextProviders";
+import { AppContext, AwsContext } from "../ContextProviders";
 import {
   createInstance,
   getAMIs,
@@ -8,8 +16,9 @@ import {
   getSecurityGroups,
   waitForInstanceOk,
 } from "./ec2Client";
+import { WizardContext } from "./Wizard";
 
-export function AwsInstanceCreate(props) {
+export function AwsInstanceCreate() {
   const [value, setValue] = useState({
     ami: {},
     name: "",
@@ -21,8 +30,9 @@ export function AwsInstanceCreate(props) {
   const [keypairs, setKeyPairs] = useState();
   const [securitygroups, setSecurityGroups] = useState();
 
-  const { client } = useContext(ClientContext);
-  const { setInstance } = useContext(InstanceContext);
+  const { setValid } = useContext(WizardContext);
+  const { client } = useContext(AwsContext);
+  const { setConnection } = useContext(AppContext);
 
   useEffect(() => {
     const queryAsync = async () => {
@@ -37,10 +47,19 @@ export function AwsInstanceCreate(props) {
 
   const onSubmit = async (data) => {
     setReady(false);
-    const instance = await createInstance(client, data);
-    const waitInstance = await waitForInstanceOk(client, instance);
-    setInstance(waitInstance);
+    const newInstance = await createInstance(client, data);
+    const instance = await waitForInstanceOk(client, newInstance);
+    if (instance.PublicIpAddress) {
+      setConnection({
+        address: instance.PublicIpAddress,
+        username:
+          instance.PlatformDetails === "Linux/UNIX" ? "ubuntu" : "ec2-user",
+        privatekey: null,
+        instance,
+      });
+    }
     setReady(true);
+    setValid(true);
   };
 
   return (
@@ -115,6 +134,7 @@ export function AwsInstanceCreate(props) {
           type="submit"
           primary
           label={ready ? "Create" : "Wait for Instance..."}
+          icon={ready ? <></> : <Spinner />}
           disabled={!client || !ready}
         />
       </Box>

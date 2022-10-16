@@ -22,11 +22,14 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Credentials files
+# Credentials and personal files
 aws.json
 azure.json
 vmware.json
+LatestDemoLicense-M7.txt
+
 # generated files
 hosts.ini
 temp.pem
 yarn.lock
+out

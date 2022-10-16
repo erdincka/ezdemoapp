@@ -1,16 +1,3 @@
-// import { Heading, Box, Paragraph } from "grommet";
-
-// function MLOps() {
-//   return (
-//     <Box fill overflow="auto">
-//       <Heading level="4">Ezmeral MLOps</Heading>
-//       <Paragraph>Test1</Paragraph>
-//     </Box>
-//   );
-// }
-
-// export default MLOps;
-
 import React, { Fragment } from "react";
 import {
   Box,
@@ -42,7 +29,7 @@ import {
   Trash,
   User,
 } from "grommet-icons";
-import { Popup } from "./Utils";
+import { Popup } from "./libs/Utils";
 
 export const MLOps = ({ srvurl, setError, setActionButton, setSpin }) => {
   const [remember, setRemember] = React.useState(true);
