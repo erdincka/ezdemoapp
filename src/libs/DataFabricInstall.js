@@ -14,19 +14,21 @@ import { NavigationCard } from "./Utils";
 export function DataFabricInstall() {
   const [wait, setWait] = useState(false);
 
-  const { output, setOutput, connection } = useContext(AppContext);
+  const { output, setOutput, connection, setConnection } =
+    useContext(AppContext);
+
+  const installer_url = `https://${connection.address}:9443/`;
 
   // Check output for install state
-  const installer_url = output?.find((l) => l.match(/https:\/\/\S*:9443/));
-  const df_url = installer_url?.replace(":9443", ":8443");
-  // const installerInstalled = output?.find((l) => l.includes(installer_url));
-  const install_task = "install started - this will take a while";
-  const install_started = output?.find((l) => l.includes(install_task));
+  const install_started_task = "install started - this will take a while";
+  const install_started = output?.find((l) => l.includes(install_started_task));
 
-  const task_finished = output?.some((l) => l.includes("PLAY RECAP"));
-  // const task_success = output?.some(
-  //   (l) => l.includes("unreachable=0") && l.includes("failed=0")
-  // );
+  const task_finished =
+    output?.some((l) => l.includes("install data fabric")) &&
+    output?.some((l) => l.includes("PLAY RECAP"));
+  const task_success =
+    task_finished &&
+    output?.some((l) => l.includes("unreachable=0") && l.includes("failed=0"));
 
   const startInstall = async () => {
     setWait(true);
@@ -38,8 +40,15 @@ export function DataFabricInstall() {
     if (task_finished) setWait(false);
   }, [task_finished]);
 
+  useEffect(() => {
+    if (task_success)
+      setConnection((old) => {
+        return { ...old, dfRunning: true };
+      });
+  }, [setConnection, task_success]);
+
   return (
-    <Box>
+    <Box direction="row" gap="medium">
       <NavigationCard
         icon={<Install />}
         title="Install"
@@ -49,17 +58,17 @@ export function DataFabricInstall() {
               <Anchor
                 target="_blank"
                 rel="noopener"
-                label={installer_url || "--"}
-                href={installer_url}
+                disabled={!install_started}
+                href={install_started ? installer_url : null}
+                label={install_started ? "Installer" : "waiting installer..."}
               />
             </NameValuePair>
-            <NameValuePair key="mcs" name="MCS">
-              <Anchor
-                target="_blank"
-                rel="noopener"
-                href={df_url}
-                label={install_started ? "Wait for install..." : df_url}
-              />
+            <NameValuePair key="status" name="Status">
+              {task_finished
+                ? task_success
+                  ? "Successfully installed"
+                  : "Install not finished, check status with the Installer UI"
+                : "waiting for install..."}
             </NameValuePair>
           </NameValueList>
         }

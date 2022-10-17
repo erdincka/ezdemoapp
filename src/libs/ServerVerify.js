@@ -10,18 +10,28 @@ export function ServerVerify() {
   const { output, setOutput, connection, setConnection } =
     useContext(AppContext);
 
-  // process output
-  const total_memory_mb = output
-    ?.find((l) => l.includes("total_memory_mb="))
-    ?.match(/total_memory_mb=(?<mem>\d+)/)[1];
-  const total_swap_mb = output
-    ?.find((l) => l.includes("total_swap_mb="))
-    ?.match(/total_swap_mb=(?<swap>\d+)/)[1];
-  const available_disks = output
-    ?.find((l) => l.includes("available_disks="))
-    ?.match(/(?<="available_disks=)(.*)(?=")/)[1];
+  const task_finished =
+    output?.some((l) => l.includes("Data Fabric pre-install verification")) &&
+    output?.some((l) => l.includes("PLAY RECAP"));
 
-  const task_finished = output?.some((l) => l.includes("PLAY RECAP"));
+  // process output if component is not frozen
+  const frozen = output?.join(" ");
+  const total_cores = (frozen?.match(/total_cores=(?<cores>\d+)/) || [
+    null,
+    null,
+  ])[1];
+  const total_memory_mb = (frozen?.match(/total_memory_mb=(?<mem>\d+)/) || [
+    null,
+    null,
+  ])[1];
+  const total_swap_mb = (frozen?.match(/total_swap_mb=(?<swap>\d+)/) || [
+    null,
+    null,
+  ])[1];
+  const available_disks = (frozen?.match(/(?<="available_disks=)(.*)(?=")/) || [
+    null,
+    null,
+  ])[1];
 
   // TODO: Set min requirements globally
   const min_memory_mb = 63000; // 64GB required, but AWS instances report 63xxx MB available
@@ -29,17 +39,35 @@ export function ServerVerify() {
   const has_enough_memory = total_memory_mb > min_memory_mb;
   const has_enough_swap = total_swap_mb > min_swap_mb;
   const has_available_disks = available_disks?.length > 0;
+  const has_enough_cores = total_cores > 16;
 
   useEffect(() => {
     if (task_finished) {
       setWait(false);
       if (has_available_disks && has_enough_memory) {
         setConnection((old) => {
-          return { ...old, canInstall: true };
+          return {
+            ...old,
+            canInstall: {
+              total_cores,
+              total_memory_mb,
+              total_swap_mb,
+              available_disks,
+            },
+          };
         });
       }
     }
-  }, [has_available_disks, has_enough_memory, setConnection, task_finished]);
+  }, [
+    available_disks,
+    has_available_disks,
+    has_enough_memory,
+    setConnection,
+    task_finished,
+    total_cores,
+    total_memory_mb,
+    total_swap_mb,
+  ]);
 
   const handleClick = () => {
     setWait(true);
@@ -53,6 +81,11 @@ export function ServerVerify() {
   };
 
   const pairs = [
+    {
+      name: "Cores",
+      value: total_cores,
+      valid: has_enough_cores,
+    },
     {
       name: "Memory (MB)",
       value: total_memory_mb,
@@ -74,9 +107,9 @@ export function ServerVerify() {
     <Box direction="row" gap="medium">
       <NavigationCard
         icon={<Resources />}
-        title="Resources"
+        title="Verify"
         description={
-          <NameValueList pairProps={{ direction: "column" }}>
+          <NameValueList>
             {pairs.map((pair) => (
               <NameValuePair key={pair.name} name={pair.name}>
                 <Box direction="row" gap="small" align="center">

@@ -4,7 +4,7 @@
   gather_facts: true
 
   tasks:
-    - debug: msg="total_memory_mb={{ ansible_memory_mb.real.total | default(0) }} total_swap_mb={{ ansible_memory_mb.swap.total | default(0) }}"
+    - debug: msg="total_cores={{ ansible_processor_vcpus }} total_memory_mb={{ ansible_memory_mb.real.total | default(0) }} total_swap_mb={{ ansible_memory_mb.swap.total | default(0) }}"
 
     - shell: |
         export DISKS=$(fdisk -l | grep 'Disk /dev/' | grep -v loop | cut -d' ' -f2 | tr -d :)

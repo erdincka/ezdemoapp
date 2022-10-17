@@ -77,11 +77,7 @@ export const ServerConnect = () => {
         required={{ indicator: false }}
         margin="small"
       >
-        <TextInput
-          id="address"
-          name="address"
-          placeholder="Hostname or IP Address"
-        />
+        <TextInput id="address" name="address" placeholder="IP or FQDN" />
       </FormField>
       <FormField
         name="username"

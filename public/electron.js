@@ -2,17 +2,21 @@ const { app, BrowserWindow, protocol, ipcMain } = require("electron");
 const path = require("path");
 const isDev = require("electron-is-dev");
 const url = require("url");
+const fixPath = "fix-path";
 
+// inherit PATH from dotfiles
+fixPath();
 // Create the native browser window.
 function createWindow() {
   const mainWindow = new BrowserWindow({
-    width: 1024,
+    width: 1200,
     height: 800,
     // Set the path of an additional "preload" script that can be used to
     // communicate between node-land and browser-land.
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
     },
+    icon: "public/icons/icon.png",
   });
 
   mainWindow.loadURL(
@@ -67,7 +71,12 @@ app.whenReady().then(() => {
     (event, webContents, url, error, certificate, callback) => {
       if (
         url.includes("https://") &&
-        (url.includes(":9443") || url.includes(":8443"))
+        (url.includes(":9443") || // installer
+          url.includes(":8443") || // MCS
+          url.includes(":8047") || // Drill
+          url.includes(":3000") || // Grafana
+          url.includes(":8888") || // Hue
+          url.includes(":5601")) // Kibana
       ) {
         // Verification logic.
         event.preventDefault();

@@ -6,20 +6,31 @@ import {
   NameValuePair,
   Text,
   Button,
+  Anchor,
+  Grid,
 } from "grommet";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { AppContext } from "./ContextProviders";
 import { DataFabricConnect } from "./libs/DataFabricConnect";
 import { AwsWizard } from "./libs/AwsWizard";
-import { Amazon, Cloud, Hadoop, Server, Vmware } from "grommet-icons";
+import {
+  Amazon,
+  Cloud,
+  Compare,
+  Cubes,
+  Hadoop,
+  Iteration,
+  Server,
+  Time,
+  Transaction,
+  Vmware,
+} from "grommet-icons";
 import { NavigationCard } from "./libs/Utils";
 import { ServerConnect } from "./libs/ServerConnect";
 import { ServerVerify } from "./libs/ServerVerify";
 import { DataFabricInstall } from "./libs/DataFabricInstall";
 
 export function DataFabric() {
-  // const [instance, setInstance] = useState();
-  // const [instanceReady, setInstanceReady] = useState();
   const [haveCluster, setHaveCluster] = useState(false);
   const [haveServer, setHaveServer] = useState(false);
   const [cloud, setCloud] = useState(false);
@@ -74,6 +85,70 @@ export function DataFabric() {
       description: "vSphere Cloud VMs",
       action: "Coming soon...",
       value: "vmware",
+    },
+  ];
+
+  useEffect(() => {
+    if (connection.connected) {
+      setCloud("");
+    }
+  }, [connection.connected]);
+
+  // connection states:
+  // connected: ansible ping successfull
+  // canInstall: server verified for installation
+  // dfRunning: df services running
+  const stage = connection?.dfRunning
+    ? "df"
+    : connection.canInstall
+    ? "install"
+    : connection.connected
+    ? "verify"
+    : "connect";
+
+  const services = [
+    { name: "MCS", url: `https://${connection?.address}:8443/` },
+    {
+      name: "S3 Object Store",
+      url: `https://${connection?.address}:8443/app/mcs/opal/#/home`,
+    },
+    { name: "Drill", url: `https://${connection?.address}:8047/` },
+    { name: "Grafana", url: `https://${connection?.address}:3000/` },
+    { name: "Hue", url: `https://${connection?.address}:8888/` },
+    { name: "Kibana", url: `https://${connection?.address}:5601/` },
+  ];
+
+  const useCases = [
+    {
+      name: "Stream Processing",
+      description:
+        "See how real time events are processed with Data Fabric using Event Store",
+      icon: <Compare />,
+      action: "Select",
+    },
+    {
+      name: "DB Query",
+      description: "",
+      icon: <Cubes />,
+      action: "Select",
+    },
+    {
+      name: "Realtime",
+      description: "",
+      icon: <Time />,
+      action: "Select",
+    },
+    {
+      name: "Transaction",
+      description: "",
+      icon: <Transaction />,
+      action: "Select",
+    },
+    {
+      name: "Workflows",
+      description: "",
+      icon: <Iteration />,
+      action: "Select",
     },
   ];
 
@@ -190,20 +265,76 @@ export function DataFabric() {
                   />
                 ))}
               </Box>
-              {!connection?.connected && cloud === "aws" && <AwsWizard />}
+              {cloud === "aws" && <AwsWizard />}
             </Box>
           )}
         </Box>
       )}
-      {connection?.connected && connection?.dfRunning === false && (
-        <Box>
-          <Heading level={4}>
-            We are ready to install on {connection.address}
-          </Heading>
+
+      {/* We have a connection. Select options based on server state */}
+      {stage === "connect" && (
+        <Heading level={4}>Select a server to start with</Heading>
+      )}
+
+      {stage === "verify" && !haveCluster && (
+        <Box fill="horizontal">
+          <Heading level={4}>Connected to {connection.address}</Heading>
           <Box direction="row" gap="medium">
             <ServerVerify />
-            <DataFabricInstall />
           </Box>
+        </Box>
+      )}
+
+      {stage === "install" && (
+        <Box fill="horizontal">
+          <Heading level={4}>We are ready to install Data DataFabric</Heading>
+          <NameValueList>
+            <NameValuePair name="IP">{connection.address}</NameValuePair>
+            <NameValuePair name="Cores">
+              {connection.canInstall.total_cores}
+            </NameValuePair>
+            <NameValuePair name="Memory (MB)">
+              {connection.canInstall.total_memory_mb}
+            </NameValuePair>
+            <NameValuePair name="Swap (MB)">
+              {connection.canInstall.total_swap_mb}
+            </NameValuePair>
+            <NameValuePair name="Disks">
+              {connection.canInstall.available_disks}
+            </NameValuePair>
+          </NameValueList>
+
+          <DataFabricInstall />
+        </Box>
+      )}
+
+      {stage === "df" && (
+        <Box fill="horizontal">
+          <Heading level={4}>Data Fabric Services</Heading>
+          <NameValueList>
+            {services.map((service) => (
+              <NameValuePair name={service.name} key={service.name}>
+                <Anchor
+                  label={service.name}
+                  href={service.url}
+                  target="_blank"
+                  rel="noopener"
+                />
+              </NameValuePair>
+            ))}
+          </NameValueList>
+          <Heading level={4}>Select Demo Use Case</Heading>
+          <Grid columns={["auto", "auto"]} gap="medium">
+            {useCases.map((uc) => (
+              <NavigationCard
+                key={uc.name}
+                title={uc.name}
+                description={uc.description}
+                icon={uc.icon}
+                action={uc.action}
+              />
+            ))}
+          </Grid>
         </Box>
       )}
     </Box>

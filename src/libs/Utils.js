@@ -118,7 +118,8 @@ export const NavigationCard = ({
   height,
 }) => (
   <Card
-    width="medium"
+    // width="medium"
+    fill="horizontal"
     height={height || "small"}
     pad={{ horizontal: "medium" }}
     background={background}
