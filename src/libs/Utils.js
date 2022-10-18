@@ -102,7 +102,7 @@ export const errorBar = (error, setError) => {
         setError([]);
       }}
       message={error.join("\n")}
-      global
+      toast
     />
   ) : (
     <></>

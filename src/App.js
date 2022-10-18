@@ -1,7 +1,15 @@
 import React, { useContext, useEffect, useMemo, useState } from "react";
 import { Grommet, Button, ResponsiveContext, Box, PageHeader } from "grommet";
 import { hpe } from "grommet-theme-hpe";
-import { Console, Book, Moon, Sun, Code, AppsRounded } from "grommet-icons";
+import {
+  Console,
+  Book,
+  Moon,
+  Sun,
+  Code,
+  AppsRounded,
+  Refresh,
+} from "grommet-icons";
 import { GlobalHeader } from "./Header";
 import { GlobalFooter } from "./Footer";
 import { AppContext } from "./ContextProviders";
@@ -76,11 +84,22 @@ function App() {
     />
   );
 
+  const refreshButton = (
+    <Button
+      tip="Reset"
+      key="reset"
+      icon={<Refresh />}
+      onClick={() => window.location.reload()}
+    />
+  );
+
   return (
     <Grommet theme={hpe} themeMode={theme} full>
       <AppContext.Provider value={contextValue}>
         <Box width={{ max: "xxlarge" }} margin="auto" fill>
-          <GlobalHeader buttons={[debugButton, modeButton, themeButton]} />
+          <GlobalHeader
+            buttons={[refreshButton, debugButton, modeButton, themeButton]}
+          />
           {errorBar(error, setError)}
 
           <Box overflow="auto">

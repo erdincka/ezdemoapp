@@ -31,10 +31,9 @@ export const ServerConnect = () => {
   }, []);
 
   // monitor output for success
-  const task_finished = output?.some((l) => l.includes("PLAY RECAP"));
+  const task_finished = output?.some((l) => l.includes("SUCCESS =>"));
   const connected =
-    task_finished &&
-    output.some((l) => l.includes("unreachable=0") && l.includes("failed=0"));
+    task_finished && output.some((l) => l.includes('"ping": "pong"'));
 
   useEffect(() => {
     if (task_finished) setWait(false);
@@ -60,7 +59,7 @@ export const ServerConnect = () => {
       privatekey,
     };
     setConnection(connection);
-    window.ezdemoAPI.ansiblePlay(["connect", connection]);
+    window.ezdemoAPI.ansiblePlay(["ping", connection]);
   };
 
   return (

@@ -1,8 +1,12 @@
-///
 const fs = require("fs");
+const path = require("path");
+const isDev = require("electron-is-dev");
 const { getAppDataFilePath } = require("./libs/helpers");
 
-// const cwd = process.cwd();
+const playbook_dir = isDev
+  ? path.join(__dirname, "playbooks")
+  : path.join(process.resourcesPath, "playbooks");
+
 const privatekey_file = getAppDataFilePath("temp.pem");
 const savePrivateKey = (data) => {
   console.dir("Called savePrivateKey");
@@ -12,6 +16,8 @@ const savePrivateKey = (data) => {
 };
 
 exports.ansiblePlay = (event, args) => {
+  // inherit PATH from dotfiles
+
   let [playbook, vars] = args;
   console.dir("Running playbook '" + playbook + "' with args:");
   console.dir(vars);
@@ -30,11 +36,18 @@ exports.ansiblePlay = (event, args) => {
   fs.writeFileSync(hosts_ini_file, hosts_ini);
 
   var Ansible = require("node-ansible");
-  var command = new Ansible.Playbook()
-    .inventory(hosts_ini_file)
-    .playbook(`public/playbooks/${playbook}`)
-    .variables(vars)
-    .verbose("v");
+  var command =
+    playbook === "ping"
+      ? new Ansible.AdHoc()
+          .inventory(hosts_ini_file)
+          .hosts("target")
+          .module("ping")
+          .verbose("v")
+      : new Ansible.Playbook()
+          .inventory(hosts_ini_file)
+          .playbook(`${playbook_dir}/${playbook}`)
+          .variables(vars)
+          .verbose("v");
 
   command.on("stdout", (data) => {
     console.log(`STDOUT: ${data.toString()}`);

@@ -10,6 +10,7 @@
 
 # production
 /build
+/dist
 
 # misc
 .DS_Store
@@ -27,6 +28,7 @@ aws.json
 azure.json
 vmware.json
 LatestDemoLicense-M7.txt
+gh-token.sh
 
 # generated files
 hosts.ini

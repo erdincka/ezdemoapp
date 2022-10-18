@@ -2,10 +2,7 @@ const { app, BrowserWindow, protocol, ipcMain } = require("electron");
 const path = require("path");
 const isDev = require("electron-is-dev");
 const url = require("url");
-const fixPath = "fix-path";
 
-// inherit PATH from dotfiles
-fixPath();
 // Create the native browser window.
 function createWindow() {
   const mainWindow = new BrowserWindow({
@@ -32,6 +29,13 @@ function createWindow() {
   if (isDev) {
     mainWindow.webContents.openDevTools({ mode: "attach" });
   }
+
+  process.env.PATH = [
+    "/opt/homebrew/bin",
+    "/usr/local/bin",
+    "$(python3 -m site --user-base)/bin",
+    process.env.PATH,
+  ].join(":");
 }
 
 // Setup a local proxy to adjust the paths of requested files when loading

@@ -14,5 +14,11 @@
       args:
         executable: /bin/bash
       become: true
+      when: ansible_system == "Linux"
+
+    - shell: |
+        echo ""
+      register: mapr_disks
+      when: ansible_system != "Linux"
 
     - debug: msg="available_disks={{ mapr_disks.stdout }}"
