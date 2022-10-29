@@ -1,24 +1,23 @@
-import { Box, Heading, List, Text } from "grommet";
+import { Box, Heading, List, ResponsiveContext, Text } from "grommet";
 import { Redhat, Ubuntu } from "grommet-icons";
 import { useContext, useEffect, useState } from "react";
-import { AppContext, AwsContext } from "../ContextProviders";
-import { getInstances, getInstanceName } from "./ec2Client";
-import { WizardContext } from "./Wizard";
-import { AwsInstanceCreate } from "./AwsInstanceCreate";
+import { AppContext } from "../../ContextProviders";
+import { getInstances, getInstanceName } from "../AWS/ec2Client";
+import { WizardContext } from "../Wizard";
 
-export function AwsInstanceSelect() {
+export function VmwareResources() {
   const [instances, setInstances] = useState();
   const { setValid } = useContext(WizardContext);
-  const { size, setConnection } = useContext(AppContext);
-  const { client } = useContext(AwsContext);
+  const { setConnection } = useContext(AppContext);
+  const size = useContext(ResponsiveContext);
 
   useEffect(() => {
     const queryAsync = async () => {
-      if (client) setInstances(await getInstances(client));
+      // if (client) setInstances(await getInstances(client));
     };
     queryAsync();
     setValid(false); // clean previous state
-  }, [client, setValid]);
+  }, [setValid]);
 
   const handleSelect = (instance) => {
     // get instance details and set the connection
@@ -90,9 +89,8 @@ export function AwsInstanceSelect() {
         </List>
       )}
       <Heading level={5}>New</Heading>
-      <AwsInstanceCreate />
     </Box>
   );
 }
 
-export default AwsInstanceSelect;
+export default VmwareResources;

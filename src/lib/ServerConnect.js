@@ -4,19 +4,19 @@ import {
   Form,
   FormField,
   Spinner,
+  Text,
   TextInput,
 } from "grommet";
 import { useContext, useEffect, useState } from "react";
 import { AppContext } from "../ContextProviders";
-import { readPrivateKey } from "./Utils";
+import { getMatchBetweenRegex, readSingleFile, runAnsible } from "./Utils";
 
-export const ServerConnect = () => {
-  const { output, setOutput, setConnection, connection } =
-    useContext(AppContext);
+export const ServerConnect = ({ onConnect, host, user }) => {
+  const { output, setOutput } = useContext(AppContext);
 
   const [formValue, setFormValue] = useState({
-    address: connection?.address || "",
-    username: connection?.username || "",
+    address: host || "",
+    username: user || "",
     privatekey: null,
   });
 
@@ -31,42 +31,39 @@ export const ServerConnect = () => {
   }, []);
 
   // monitor output for success
-  const task_finished = output?.some((l) => l.includes("SUCCESS =>"));
-  const connected =
-    task_finished && output.some((l) => l.includes('"ping": "pong"'));
+  const task_finished = output?.some(
+    (l) => l.includes("SUCCESS =>") || l.includes("UNREACHABLE! =>")
+  );
+  const connected = output?.some((l) => l.includes('"ping": "pong"'));
+
+  const task_fail = output?.some((l) => l.includes("UNREACHABLE! =>"))
+    ? getMatchBetweenRegex(output.join(""), '"msg": "', '",')
+    : false;
 
   useEffect(() => {
     if (task_finished) setWait(false);
   }, [task_finished]);
 
   useEffect(() => {
-    if (connected) {
-      setConnection((old) => {
-        return {
-          ...old,
-          connected,
-        };
-      });
-    }
-  }, [connected, setConnection]);
+    if (connected) onConnect({ ...formValue, privatekey });
+  }, [connected, formValue, onConnect, privatekey]);
 
   const handleSubmit = ({ value }) => {
     setWait(true);
-    setOutput([]); // clean up previus output
-    let connection = {
+    setOutput([]);
+    let newConnection = {
       address: value.address,
       username: value.username,
       privatekey,
     };
-    setConnection(connection);
-    window.ezdemoAPI.ansiblePlay(["ping", connection]);
+    runAnsible("ping", newConnection);
   };
 
   return (
     <Form
       value={formValue}
       onChange={setFormValue}
-      onSubmit={handleSubmit} // include rendered privatekey
+      onSubmit={handleSubmit}
       validate="submit"
     >
       <FormField
@@ -103,7 +100,7 @@ export const ServerConnect = () => {
             browse: privatekey ? "Replace File" : "Select File",
           }}
           multiple={false}
-          onChange={(event, { files }) => readPrivateKey(files, setPrivatekey)}
+          onChange={(event, { files }) => readSingleFile(files, setPrivatekey)}
         />
       </FormField>
       <Button
@@ -115,6 +112,7 @@ export const ServerConnect = () => {
         disabled={wait}
         type="submit"
       />
+      <Text color="status-critical">{task_fail}</Text>
     </Form>
   );
 };

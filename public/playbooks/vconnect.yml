@@ -1,0 +1,31 @@
+---
+- name: VCONNECT
+  hosts: target
+  gather_facts: false
+
+  tasks:
+    - name: Gather information about all datacenters
+      community.vmware.vmware_datacenter_info:
+        hostname: "{{ address }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        validate_certs: false
+      delegate_to: localhost
+      register: result
+
+    - debug: msg="VCONNECT={{ result['datacenter_info'] }}END_VCONNECT"
+
+    # - name: Gather information about all datastores
+    #   community.vmware.vmware_datastore_info:
+    #     hostname: "{{ address }}"
+    #     username: "{{ username }}"
+    #     password: "{{ password }}"
+    #     datacenter_name: " {{ item.name }} "
+    #     validate_certs: false
+    #   with_items: "{{ dcout['datacenter_info'] | default([]) }}"
+    #   delegate_to: localhost
+    #   register: dsout
+
+    # - name: Display all datastores from all datacenters
+    #   debug:
+    #     msg: "DATASTORES={{ dsout | community.general.json_query('results[*].{datastores: datastores, item: item}') }}END_DATASTORES"

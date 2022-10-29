@@ -1,10 +1,10 @@
-import { Box, Header } from "grommet";
+import { Box, Header, ResponsiveContext } from "grommet";
 import { useContext } from "react";
 import { AppIdentity } from "./AppIdentity";
-import { AppContext } from "./ContextProviders";
 
 export const GlobalHeader = ({ buttons }) => {
-  const { size } = useContext(AppContext);
+  const size = useContext(ResponsiveContext);
+
   return (
     <Header
       align="center"
@@ -17,7 +17,7 @@ export const GlobalHeader = ({ buttons }) => {
         vertical: "small",
       }}
     >
-      <AppIdentity title="Ezdemo" brand="hpe" />
+      <AppIdentity title="Ezdemo" brand="hpe" href="/" />
       <Box direction="row">{buttons}</Box>
     </Header>
   );

@@ -1,13 +1,12 @@
 import React, { useContext } from "react";
-import { Box, Button, Footer } from "grommet";
+import { Box, Button, Footer, ResponsiveContext } from "grommet";
 import { FormNextLink } from "grommet-icons";
 import { WizardContext } from ".";
-import { AppContext } from "../../ContextProviders";
 
 export const StepFooter = ({ valid }) => {
   const { activeIndex, setActiveIndex, id, steps, width } =
     useContext(WizardContext);
-  const { size } = useContext(AppContext);
+  const size = useContext(ResponsiveContext);
 
   const handleSubmit = (event) => {
     if (activeIndex < steps.length - 1) {

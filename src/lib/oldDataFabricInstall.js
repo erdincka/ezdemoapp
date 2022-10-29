@@ -9,7 +9,7 @@ import {
 import { useContext, useEffect, useState } from "react";
 import { AppContext } from "../ContextProviders";
 import { Deploy, Install } from "grommet-icons";
-import { NavigationCard } from "./Utils";
+import { NavigationCard } from "./NavigationCard";
 
 export function DataFabricInstall() {
   const [wait, setWait] = useState(false);

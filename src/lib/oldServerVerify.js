@@ -2,7 +2,8 @@ import { Box, Button, NameValueList, NameValuePair, Spinner } from "grommet";
 import { Resources, Run } from "grommet-icons";
 import { useContext, useEffect, useState } from "react";
 import { AppContext } from "../ContextProviders";
-import { badIcon, goodIcon, NavigationCard } from "./Utils";
+import { badIcon, goodIcon } from "./Utils";
+import { NavigationCard } from "./NavigationCard";
 
 export function ServerVerify() {
   const [wait, setWait] = useState(false);

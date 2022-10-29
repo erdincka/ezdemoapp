@@ -8,7 +8,7 @@ import {
   TextInput,
 } from "grommet";
 import { useContext, useEffect, useState } from "react";
-import { AppContext, AwsContext } from "../ContextProviders";
+import { AppContext } from "../../ContextProviders";
 import {
   createInstance,
   getAMIs,
@@ -16,9 +16,8 @@ import {
   getSecurityGroups,
   waitForInstanceOk,
 } from "./ec2Client";
-import { WizardContext } from "./Wizard";
 
-export function AwsInstanceCreate() {
+export function AwsInstanceCreate({ client, onSuccess }) {
   const [value, setValue] = useState({
     ami: {},
     name: "",
@@ -30,8 +29,6 @@ export function AwsInstanceCreate() {
   const [keypairs, setKeyPairs] = useState();
   const [securitygroups, setSecurityGroups] = useState();
 
-  const { setValid } = useContext(WizardContext);
-  const { client } = useContext(AwsContext);
   const { setConnection } = useContext(AppContext);
 
   useEffect(() => {
@@ -57,9 +54,9 @@ export function AwsInstanceCreate() {
         privatekey: null,
         instance,
       });
+      onSuccess(instance);
     }
     setReady(true);
-    setValid(true);
   };
 
   return (
@@ -75,7 +72,6 @@ export function AwsInstanceCreate() {
         label="Image / OS"
         required
         margin="small"
-        width="medium"
       >
         <Select
           id="ami"
@@ -91,7 +87,6 @@ export function AwsInstanceCreate() {
         label="Instance Name"
         required
         margin="small"
-        width="medium"
       >
         <TextInput id="name" name="name" />
       </FormField>
@@ -101,7 +96,6 @@ export function AwsInstanceCreate() {
         label="KeyPair"
         required
         margin="small"
-        width="medium"
       >
         <Select
           id="keypair"
@@ -117,7 +111,6 @@ export function AwsInstanceCreate() {
         label="Security Group"
         required
         margin="small"
-        width="medium"
       >
         <Select
           id="securitygroup"
@@ -141,5 +134,3 @@ export function AwsInstanceCreate() {
     </Form>
   );
 }
-
-export default AwsInstanceCreate;

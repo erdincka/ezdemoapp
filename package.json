@@ -15,53 +15,8 @@
     "aws-sdk": "^2.1223.0",
     "electron-is-dev": "^2.0.0",
     "fix-path": "^4.0.0",
-    "node-ansible": "^0.5.5"
-  },
-  "build": {
-    "appId": "ezdemo.hpe",
-    "files": [
-      "build/*",
-      "package.json"
-    ],
-    "extraResources": [
-      {
-        "from": "./public/playbooks",
-        "to": "playbooks",
-        "filter": [
-          "**/*"
-        ]
-      }
-    ],
-    "mac": {
-      "icon": "public/icons/icon.icns",
-      "target": "dmg",
-      "defaultArch": "universal"
-    },
-    "win": {
-      "publish": [
-        "github"
-      ],
-      "icon": "public/icons/logo512_sq.png",
-      "target": [
-        {
-          "target": "portable",
-          "arch": [
-            "x64"
-          ]
-        }
-      ]
-    },
-    "linux": {
-      "category": "Utility",
-      "target": [
-        {
-          "target": "AppImage",
-          "arch": [
-            "x64"
-          ]
-        }
-      ]
-    }
+    "node-ansible": "^0.5.5",
+    "react-router-dom": "^6.4.2"
   },
   "scripts": {
     "app:dir": "electron-builder --dir",
@@ -128,58 +83,55 @@
     "patterns": [
       "!**/**.json",
       "!**/**.ini",
-      "!**/**.pem"
+      "!**/**.pem",
+      "!**/**.yml"
     ]
   },
-  "config": {
-    "forge": {
-      "packagerConfig": {
-        "arch": [
-          "x64",
-          "arm64"
-        ],
-        "platform": [
-          "linux",
-          "mac",
-          "win32"
-        ],
-        "darwinDarkModeSupport": true,
-        "icon": "public/icons/icon",
-        "prune": true
-      },
-      "makers": [
+  "build": {
+    "appId": "ezdemo.hpe",
+    "files": [
+      "build/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "./public/playbooks",
+        "to": "playbooks",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "publish": [
+      "github"
+    ],
+    "mac": {
+      "icon": "public/icons/icon.icns",
+      "target": "dmg",
+      "defaultArch": "universal"
+    },
+    "win": {
+      "icon": "public/icons/logo512_sq.png",
+      "target": [
         {
-          "name": "@electron-forge/maker-dmg",
-          "config": {
-            "name": "EZdemo",
-            "format": "ULFO"
-          }
-        },
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "linux": {
+      "category": "Utility",
+      "target": [
         {
-          "name": "@electron-forge/maker-squirrel",
-          "config": {
-            "name": "EZdemo"
-          }
-        },
-        {
-          "name": "@electron-forge/maker-deb",
-          "config": {
-            "name": "EZdemo",
-            "options": {
-              "icon": "public/icons/icon.png"
-            }
-          }
-        },
-        {
-          "name": "@electron-forge/maker-rpm",
-          "config": {
-            "name": "EZdemo",
-            "options": {
-              "icon": "public/icons/icon.png"
-            }
-          }
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
         }
       ]
     }
-  }
+  },
+  "config": {}
 }

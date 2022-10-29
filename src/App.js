@@ -1,5 +1,5 @@
-import React, { useContext, useEffect, useMemo, useState } from "react";
-import { Grommet, Button, ResponsiveContext, Box, PageHeader } from "grommet";
+import React, { useEffect, useMemo, useState } from "react";
+import { Grommet, Button, Box } from "grommet";
 import { hpe } from "grommet-theme-hpe";
 import {
   Console,
@@ -13,19 +13,19 @@ import {
 import { GlobalHeader } from "./Header";
 import { GlobalFooter } from "./Footer";
 import { AppContext } from "./ContextProviders";
-import { DataFabric } from "./DataFabric";
-import { errorBar } from "./libs/Utils";
-import { LogViewer } from "./LogViewer";
+import { errorBar } from "./lib/Utils";
+import { LogViewer } from "./lib/LogViewer";
+import { Outlet } from "react-router-dom";
 
-function App() {
+export function App() {
   const [learning, setLearning] = useState(false);
   const [theme, setTheme] = useState("dark");
   const [debug, setDebug] = useState(false);
   const [output, setOutput] = useState([]);
   const [error, setError] = useState([]);
+  const [client, setClient] = useState({});
   const [connection, setConnection] = useState({});
 
-  const size = useContext(ResponsiveContext);
   // Subscribe to channels for output
   useEffect(() => {
     const processOutput = (data) => setOutput((old) => [...old, data]);
@@ -35,14 +35,15 @@ function App() {
 
   // Subscribe to channels for errors
   useEffect(() => {
-    const processError = (data) => setError((old) => [...old, data]);
+    const processError = (data) => {
+      setError((old) => [...old, data]);
+    };
     const removeListener = window.ezdemoAPI.receive("error", processError);
     return () => removeListener();
   }, [error]);
 
   const contextValue = useMemo(
     () => ({
-      size,
       learning,
       setLearning,
       output,
@@ -52,10 +53,16 @@ function App() {
       connection,
       setConnection,
       debug,
+      client,
+      setClient,
     }),
-    [size, learning, error, output, connection, debug]
+    [learning, output, error, connection, debug, client]
   );
 
+  const reset = () => {
+    setConnection({});
+    setClient({});
+  };
   // Component functions
   const themeButton = (
     <Button
@@ -89,56 +96,25 @@ function App() {
       tip="Reset"
       key="reset"
       icon={<Refresh />}
-      onClick={() => window.location.reload()}
+      onClick={reset} // reset the connection & client - should take everything to beginning
     />
   );
 
   return (
     <Grommet theme={hpe} themeMode={theme} full>
       <AppContext.Provider value={contextValue}>
+        <GlobalHeader
+          buttons={[refreshButton, debugButton, modeButton, themeButton]}
+        />
+        {errorBar(error, setError)}
         <Box width={{ max: "xxlarge" }} margin="auto" fill>
-          <GlobalHeader
-            buttons={[refreshButton, debugButton, modeButton, themeButton]}
-          />
-          {errorBar(error, setError)}
+          <Outlet />
 
-          <Box overflow="auto">
-            <Box
-              background="background"
-              justify="center"
-              pad={{
-                horizontal: !["xsmall", "small"].includes(size)
-                  ? "xlarge"
-                  : "medium",
-                vertical: "large",
-              }}
-              flex={false}
-            >
-              <Box gap="large">
-                {learning ? (
-                  <PageHeader
-                    title="Learn by doing"
-                    subtitle="Try it yourself, on your own environment, in your own pace"
-                  />
-                ) : (
-                  <PageHeader
-                    title="Demo Mode"
-                    subtitle="Try and demo Ezmeral live"
-                  />
-                )}
-              </Box>
-
-              <DataFabric />
-              {/* <MLOps /> */}
-              {debug && <LogViewer lines={output} />}
-            </Box>
-          </Box>
-
-          <GlobalFooter />
+          {debug && <LogViewer lines={output} />}
         </Box>
+
+        <GlobalFooter />
       </AppContext.Provider>
     </Grommet>
   );
 }
-
-export default App;

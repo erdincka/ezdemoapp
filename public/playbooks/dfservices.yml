@@ -1,0 +1,10 @@
+---
+- name: DFSERVICES
+  hosts: target
+  gather_facts: false
+
+  tasks:
+    - name: get mapr services
+      shell: "systemctl | grep mapr | tr -s '  ' ' '| cut -d' ' -f2,4"
+      register: result
+    - debug: msg="DFSERVICES=={{ result.stdout_lines }}==END_DFSERVICES"

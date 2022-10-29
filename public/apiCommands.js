@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const isDev = require("electron-is-dev");
-const { getAppDataFilePath } = require("./libs/helpers");
+const { getAppDataFilePath } = require("./lib/helpers");
 
 const playbook_dir = isDev
   ? path.join(__dirname, "playbooks")
@@ -21,16 +21,17 @@ exports.ansiblePlay = (event, args) => {
   let [playbook, vars] = args;
   console.dir("Running playbook '" + playbook + "' with args:");
   console.dir(vars);
-  // save private key to file
-  savePrivateKey(vars.privatekey);
+  // save private key to file (for aws)
+  if (vars.privatekey) savePrivateKey(vars.privatekey);
   // Save ansible inventory
   const hosts_ini = `
   [target]
-  ${vars.address}
+  ${vars.address} ansible_connection=ssh ansible_user=${vars.username} ansible_ssh_private_key_file="${privatekey_file}"
+  [local]
+  localhost ansible_connection=local
   [all:vars]
-  ansible_connection=ssh
-  ansible_user=${vars.username}
-  ansible_ssh_private_key_file=${privatekey_file}
+  [inventory]
+  enable_plugins=community.vmware.vmware_host_inventory
   `;
   const hosts_ini_file = getAppDataFilePath("hosts.ini");
   fs.writeFileSync(hosts_ini_file, hosts_ini);
@@ -54,8 +55,11 @@ exports.ansiblePlay = (event, args) => {
     event.sender.send("output", data.toString());
   });
   command.on("stderr", (data) => {
-    console.error(`STDERR: ${data}`);
-    event.sender.send("error", data.toString());
+    // ignore python warning on macos
+    if (!data.includes("Platform darwin on host")) {
+      console.error(`STDERR: ${data}`);
+      event.sender.send("error", data.toString());
+    }
   });
   command.exec();
 };

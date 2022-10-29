@@ -1,11 +1,10 @@
 import React, { useContext } from "react";
-import { Box } from "grommet";
+import { Box, ResponsiveContext } from "grommet";
 import { StepHeader, WizardContext } from ".";
-import { AppContext } from "../../ContextProviders";
 
 export const StepContent = () => {
   const { activeIndex, ref, steps, width } = useContext(WizardContext);
-  const { size } = useContext(AppContext);
+  const size = useContext(ResponsiveContext);
 
   return (
     <Box

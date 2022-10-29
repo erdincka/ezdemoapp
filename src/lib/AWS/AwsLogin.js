@@ -1,18 +1,16 @@
-import { Form, FormField, TextInput } from "grommet";
-import { useContext, useEffect, useState } from "react";
-import { AwsContext } from "../ContextProviders";
+import { Button, Form, FormField, Spinner, TextInput } from "grommet";
+import { useEffect, useState } from "react";
 import { configureClient } from "./ec2Client";
-import { WizardContext } from "./Wizard";
 
-export function AWSCredentials() {
+export function AwsLogin({ onSuccess }) {
   const [credentials, setCredentials] = useState({
     accessKeyId: "",
     secretAccessKey: "",
     region: "",
   });
-  const { setClient } = useContext(AwsContext);
-  const { setValid } = useContext(WizardContext);
+  const [wait, setWait] = useState(false);
 
+  // get saved credentials
   useEffect(() => {
     window.ezdemoAPI
       .getCredentials("aws")
@@ -24,7 +22,8 @@ export function AWSCredentials() {
       .catch((e) => console.error(e));
   }, []);
 
-  useEffect(() => {
+  const handleSubmit = () => {
+    setWait(true);
     configureClient(
       credentials.accessKeyId,
       credentials.secretAccessKey,
@@ -32,18 +31,22 @@ export function AWSCredentials() {
     )
       .then((client) => {
         if (client) {
-          setClient(client);
+          onSuccess(client);
+          // setClient((old) => {
+          //   return { ...old, aws: client };
+          // });
           window.ezdemoAPI.saveCredentials({ aws: credentials });
-          setValid(true);
+          setWait(false);
         }
       })
       .catch((error) => console.error(error));
-  }, [credentials, setClient, setValid]);
+  };
 
   return (
     <Form
       value={credentials}
       onChange={setCredentials}
+      onSubmit={handleSubmit}
       validate="submit"
       direction="row"
     >
@@ -52,7 +55,6 @@ export function AWSCredentials() {
         htmlFor="accessKeyId"
         label="Access Key"
         required
-        width="medium"
         margin="small"
       >
         <TextInput id="accessKeyId" name="accessKeyId" />
@@ -79,8 +81,15 @@ export function AWSCredentials() {
       >
         <TextInput id="region" name="region" />
       </FormField>
+      <Button
+        margin="small"
+        label={wait ? "Signing in..." : "Sign In"}
+        icon={wait ? <Spinner /> : <></>}
+        reverse
+        primary
+        disabled={wait}
+        type="submit"
+      />
     </Form>
   );
 }
-
-export default AWSCredentials;

@@ -1,4 +1,4 @@
-import React, { Fragment } from "react";
+import React, { Fragment, useContext } from "react";
 import {
   Box,
   Notification,
@@ -15,10 +15,14 @@ import {
   CardBody,
   CardFooter,
   Grid,
+  Page,
+  PageContent,
+  PageHeader,
 } from "grommet";
 import {
   Add,
   AddCircle,
+  FormAdd,
   FormLock,
   Info,
   Link,
@@ -29,9 +33,12 @@ import {
   Trash,
   User,
 } from "grommet-icons";
-import { Popup } from "./libs/Utils";
+import { Popup } from "./lib/Popup";
+import { ReverseAnchor } from "./lib/ReverseAnchor";
+import { useNavigate } from "react-router-dom";
+import { AppContext } from "./ContextProviders";
 
-export const MLOps = ({ srvurl, setError, setActionButton, setSpin }) => {
+export const MLOps = ({ srvurl, setActionButton, setSpin }) => {
   const [remember, setRemember] = React.useState(true);
   const [layer, setLayer] = React.useState(2);
   const [alert, setAlert] = React.useState(null);
@@ -42,6 +49,7 @@ export const MLOps = ({ srvurl, setError, setActionButton, setSpin }) => {
   });
   const [platform, setPlatform] = React.useState();
   const [ml_apps, setMlapps] = React.useState();
+  const { setError } = useContext(AppContext);
 
   // load credentials if saved
   React.useEffect(() => {
@@ -96,7 +104,6 @@ export const MLOps = ({ srvurl, setError, setActionButton, setSpin }) => {
           k8sc_list();
           setLayer(0);
           setSpin(false);
-          setActionButton(actionButton);
         }
       })
       .catch((error) => setError(error));
@@ -142,33 +149,41 @@ export const MLOps = ({ srvurl, setError, setActionButton, setSpin }) => {
     console.log("Logged out!");
   };
 
-  const actionButton = (
-    <Button
-      label={
-        platform?.config?.result === "Success"
-          ? "Connected as: " + credentials.username
-          : "Connect to Ezmeral"
-      }
-      onClick={() => setLayer(2)}
-    />
-  );
+  const navigate = useNavigate();
 
   return (
-    <Box flex overflow="auto" align="start" margin="small" gap="small">
-      <Box align="start" fill="horizontal">
-        <Box direction="row" justify="between" fill="horizontal">
-          {actionButton}
-          {platform?.config && (
+    <Page fill overflow="auto">
+      <PageContent>
+        <PageHeader
+          title="Ezmeral Cluster"
+          parent={<ReverseAnchor label="Home" onClick={() => navigate(-1)} />}
+          actions={
             <Button
-              icon={<Refresh />}
-              label="Refresh"
-              onClick={() => k8sc_list()}
+              icon={<FormAdd />}
+              secondary
+              onClick={
+                () => setLayer(2)
+                //  setPopup("clusterconnect")
+              }
             />
-          )}
-          {platform?.config && (
-            <Button label="Logout" onClick={() => disconnect()} />
-          )}
-        </Box>
+          }
+          pad={{ vertical: "medium" }}
+        />
+
+        {platform?.config?.result === "Success"
+          ? "Connected as: " + credentials.username
+          : "Connect to Ezmeral"}
+
+        {platform?.config && (
+          <Button
+            icon={<Refresh />}
+            label="Refresh"
+            onClick={() => k8sc_list()}
+          />
+        )}
+        {platform?.config && (
+          <Button label="Logout" onClick={() => disconnect()} />
+        )}
 
         {layer === 2 && (
           <Popup
@@ -294,62 +309,60 @@ export const MLOps = ({ srvurl, setError, setActionButton, setSpin }) => {
             </Box>
           </Box>
         )}
-      </Box>
-      {platform?.tenant && (
-        <Box>
-          <Text weight="bold">Tenant: {platform.tenant.label.name}</Text>
-          <Grid columns={{ count: 4, size: "auto" }} gap="small">
-            {ml_apps?.map((app) => (
-              <Card key={app.title}>
-                <CardHeader>
-                  <Text weight="bold">{app.title}</Text>
-                </CardHeader>
-                <CardBody>
-                  <Text truncate="tip">{app.description}</Text>
-                </CardBody>
-                <CardFooter pad={{ horizontal: "small" }}>
-                  <Button
-                    icon={<Trash color="red" />}
-                    hoverIndicator
-                    onClick={() => appOp("delete", platform.tenant, app)}
-                  />
-                  <Button
-                    icon={<Info color="plain" />}
-                    hoverIndicator
-                    onClick={() =>
-                      setAlert({
-                        title: app.title,
-                        message:
-                          app.description +
-                          " deploying " +
-                          app.deploy.map((a) => a.name).join(", ") +
-                          ".",
-                        status: "normal",
-                      })
-                    }
-                  />
-                  <Button
-                    icon={<Add color="plain" />}
-                    hoverIndicator
-                    onClick={() => appOp("apply", platform.tenant, app)}
-                  />
-                  {/* <Button icon={<Test color="plain" />} hoverIndicator onClick={ () => appOp('test', platform.tenant, app) } /> */}
-                </CardFooter>
-              </Card>
-            ))}
-          </Grid>
-        </Box>
-      )}
-      {alert && (
-        <Notification
-          title={alert.title}
-          message={alert.message}
-          status={alert.status}
-          onClose={() => setAlert(null)}
-        />
-      )}
-    </Box>
+        {platform?.tenant && (
+          <Box>
+            <Text weight="bold">Tenant: {platform.tenant.label.name}</Text>
+            <Grid columns={{ count: 4, size: "auto" }} gap="small">
+              {ml_apps?.map((app) => (
+                <Card key={app.title}>
+                  <CardHeader>
+                    <Text weight="bold">{app.title}</Text>
+                  </CardHeader>
+                  <CardBody>
+                    <Text truncate="tip">{app.description}</Text>
+                  </CardBody>
+                  <CardFooter pad={{ horizontal: "small" }}>
+                    <Button
+                      icon={<Trash color="red" />}
+                      hoverIndicator
+                      onClick={() => appOp("delete", platform.tenant, app)}
+                    />
+                    <Button
+                      icon={<Info color="plain" />}
+                      hoverIndicator
+                      onClick={() =>
+                        setAlert({
+                          title: app.title,
+                          message:
+                            app.description +
+                            " deploying " +
+                            app.deploy.map((a) => a.name).join(", ") +
+                            ".",
+                          status: "normal",
+                        })
+                      }
+                    />
+                    <Button
+                      icon={<Add color="plain" />}
+                      hoverIndicator
+                      onClick={() => appOp("apply", platform.tenant, app)}
+                    />
+                    {/* <Button icon={<Test color="plain" />} hoverIndicator onClick={ () => appOp('test', platform.tenant, app) } /> */}
+                  </CardFooter>
+                </Card>
+              ))}
+            </Grid>
+          </Box>
+        )}
+        {alert && (
+          <Notification
+            title={alert.title}
+            message={alert.message}
+            status={alert.status}
+            onClose={() => setAlert(null)}
+          />
+        )}
+      </PageContent>
+    </Page>
   );
 };
-
-export default MLOps;

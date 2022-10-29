@@ -1,0 +1,22 @@
+---
+- name: DFCANINSTALL
+  hosts: target
+  gather_facts: true
+
+  tasks:
+    - shell: |
+        export DISKS=$(fdisk -l | grep 'Disk /dev/' | grep -v loop | cut -d' ' -f2 | tr -d :)
+        export PARTS=$(fdisk -l | grep -e '^/dev/[a-z0-9]' | cut -d' ' -f1)
+        for d in ${DISKS}; do if [[ "${PARTS}" != "$d"* ]] ; then echo $d; fi; done
+      register: mapr_disks
+      args:
+        executable: /bin/bash
+      become: true
+
+    - debug: msg="DFCANINSTALL=={{ result.keys() | zip(result.values()) | map('join', ' ') | list }}==END_DFCANINSTALL"
+      vars:
+        result:
+          cores: "{{ ansible_processor_vcpus }}"
+          memory: "{{ ansible_memory_mb.real.total }}"
+          swap: "{{ ansible_memory_mb.swap.total }}"
+          disks: "{{ mapr_disks.stdout_lines | join(',') }}"

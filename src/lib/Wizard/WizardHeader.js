@@ -1,13 +1,12 @@
 import React, { useContext } from "react";
-import { Box, Button, Header, Text } from "grommet";
+import { Box, Button, Header, ResponsiveContext, Text } from "grommet";
 import { FormClose, FormPreviousLink } from "grommet-icons";
 import { WizardContext } from ".";
-import { AppContext } from "../../ContextProviders";
 
 export const WizardHeader = ({ closer }) => {
   const { activeIndex, activeStep, setActiveIndex, steps, wizardTitle } =
     useContext(WizardContext);
-  const { size } = useContext(AppContext);
+  const size = useContext(ResponsiveContext);
 
   return (
     <Header background="background-contrast" pad="small" responsive={false}>

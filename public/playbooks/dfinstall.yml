@@ -1,5 +1,5 @@
 ---
-- name: install data fabric
+- name: DFINSTALL
   hosts: target
   gather_facts: true
   vars:
@@ -138,3 +138,6 @@
       failed_when:
         - licensed.rc != 0
         - "'license exists' not in licensed.stdout"
+
+    - name: result
+      debug: msg="DFINSTALL=={{ public_ip.stdout }}==END_DFINSTALL"
