@@ -1,0 +1,66 @@
+---
+- name: DFCLIENT
+  hosts: target
+  gather_facts: true
+  vars:
+    cluster_name: "{{ my_cluster_name | default('core') }}.df.demo"
+    admin_password: "mapr"
+
+  tasks:
+    - name: Copy scripts to home
+      ansible.builtin.copy:
+        src: "../scripts"
+        dest: "."
+        mode: u=rwx,g=r,o=r
+
+    - name: Copy script settings
+      ansible.builtin.template:
+        src: script_template.j2
+        dest: scripts/settings.py
+        mode: "0755"
+
+    - name: Ensure path for mapr libraries
+      ansible.builtin.lineinfile:
+        path: /etc/environment
+        line: export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/mapr/lib
+      become: true
+
+    - name: Ensure pip3 is installed
+      ansible.builtin.package:
+        name: python3-pip
+        state: present
+      when: ansible_facts['os_family'] == "Debian"
+      become: true
+
+    - name: Ensure pip3 is installed
+      ansible.builtin.package:
+        name:
+          - gcc
+          - gcc-c++
+        state: present
+      when: ansible_facts['os_family'] == "RedHat"
+      become: true
+
+    - name: install python libs as root
+      shell: |
+        pip3 install --global-option=build_ext --global-option="--library-dirs=/opt/mapr/lib" --global-option="--include-dirs=/opt/mapr/include/" mapr-streams-python
+        pip3 install maprdb-python-client
+        pip3 install hapiclient
+        pip3 install protobuf==3.19.*
+      become: true
+
+    - name: prepare resources
+      shell: |
+        maprcli stream info -path mystream || maprcli stream create -path mystream -produceperm p -consumeperm p -topicperm p
+        maprcli stream topic info -path mystream -topic mytopic || maprcli stream topic create -path mystream -topic mytopic
+        [ -d /mapr/{{ cluster_name }}/user/mapr/data ] || sudo -u mapr mkdir /mapr/{{ cluster_name }}/user/mapr/data
+        [ -d /mapr/{{ cluster_name }}/user/mapr/myfiles ] || sudo -u mapr mkdir /mapr/{{ cluster_name }}/user/mapr/myfiles
+        sudo -u mapr chmod o+w /mapr/{{ cluster_name }}/user/mapr/data
+
+    - name: copy examples to maprfs
+      shell: |
+        hadoop fs -mkdir scripts
+        hadoop fs -put scripts/* scripts
+
+    - name: result
+      debug: msg="DFCLIENT=={{ [] | list }}==END_DFCLIENT"

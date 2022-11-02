@@ -1,4 +1,4 @@
-const { app, BrowserWindow, protocol, ipcMain } = require("electron");
+const { app, BrowserWindow, protocol, ipcMain, shell } = require("electron");
 const path = require("path");
 const isDev = require("electron-is-dev");
 const url = require("url");
@@ -70,37 +70,47 @@ app.whenReady().then(() => {
   });
 
   // Enable connecting to self-signed certificates
-  app.on(
-    "certificate-error",
-    (event, webContents, url, error, certificate, callback) => {
-      if (
-        url.includes("https://") &&
-        (url.includes(":9443") || // installer
-          url.includes(":8443") || // MCS
-          url.includes(":8047") || // Drill
-          url.includes(":3000") || // Grafana
-          url.includes(":8888") || // Hue
-          url.includes(":5601")) // Kibana
-      ) {
-        // Verification logic.
-        event.preventDefault();
-        callback(true);
-      } else {
-        callback(false);
-      }
-    }
-  );
+  // NOT USED ANYMORE
+  // app.on(
+  //   "certificate-error",
+  //   (event, webContents, url, error, certificate, callback) => {
+  //     if (
+  //       url.includes("https://") &&
+  //       (url.includes(":9443") || // Installer
+  //         url.includes(":8443") || // MCS
+  //         url.includes(":8780") || // AirFlow
+  //         url.includes(":12443") || // NiFi
+  //         url.includes(":9995") || // Zeppelin
+  //         url.includes(":8888") || // Hue
+  //         url.includes(":8998") || // Livy Rest
+  //         url.includes(":8047") || // Drill
+  //         url.includes(":6182") || // Ranger
+  //         url.includes(":3000") || // Grafana
+  //         url.includes(":5601")) // Kibana
+  //     ) {
+  //       // Verification logic.
+  //       event.preventDefault();
+  //       callback(true);
+  //     } else {
+  //       callback(false);
+  //     }
+  //   }
+  // );
 
   // Define IPC calls here
   const {
     ansiblePlay,
-    pythonExec,
     getCredentials,
     saveCredentials,
     getPrivateKey,
+    queryVcenter,
   } = require("./apiCommands");
   ipcMain.on("ansible", ansiblePlay);
-  ipcMain.on("python", pythonExec);
+  ipcMain.on("browse", (event, link) => {
+    shell.openExternal(link);
+  });
+
+  ipcMain.handle("vcenter", queryVcenter);
   ipcMain.handle("save_credentials", saveCredentials);
   ipcMain.handle("read_credentials", getCredentials);
   ipcMain.handle("read_privatekey", getPrivateKey);

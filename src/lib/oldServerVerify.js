@@ -2,7 +2,7 @@ import { Box, Button, NameValueList, NameValuePair, Spinner } from "grommet";
 import { Resources, Run } from "grommet-icons";
 import { useContext, useEffect, useState } from "react";
 import { AppContext } from "../ContextProviders";
-import { badIcon, goodIcon } from "./Utils";
+import { badIcon, df_min_cores, df_min_memory, goodIcon } from "./Utils";
 import { NavigationCard } from "./NavigationCard";
 
 export function ServerVerify() {
@@ -35,12 +35,12 @@ export function ServerVerify() {
   ])[1];
 
   // TODO: Set min requirements globally
-  const min_memory_mb = 63000; // 64GB required, but AWS instances report 63xxx MB available
+  const min_memory_mb = df_min_memory;
   const min_swap_mb = Math.ceil(total_memory_mb * 0.2);
   const has_enough_memory = total_memory_mb > min_memory_mb;
   const has_enough_swap = total_swap_mb > min_swap_mb;
   const has_available_disks = available_disks?.length > 0;
-  const has_enough_cores = total_cores > 16;
+  const has_enough_cores = total_cores >= df_min_cores;
 
   useEffect(() => {
     if (task_finished) {

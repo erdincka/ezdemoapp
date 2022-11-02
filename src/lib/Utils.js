@@ -1,6 +1,9 @@
 import { Box, Notification, Text } from "grommet";
 import { StatusCriticalSmall, StatusGoodSmall } from "grommet-icons";
 
+export const df_min_cores = 16;
+export const df_min_memory = 63000; // 64GB required, but AWS instances report 63xxx MB available
+
 export const Identifier = ({ title, subtitle, content, icon }) => {
   return (
     <Box
@@ -25,6 +28,17 @@ export const goodIcon = <StatusGoodSmall color="status-ok" size="small" />;
 export const badIcon = (
   <StatusCriticalSmall color="status-critical" size="small" />
 );
+
+export const copyToClipboard = (text) => {
+  navigator.clipboard.writeText(text).then(
+    () => {
+      return true;
+    },
+    () => {
+      return false;
+    }
+  );
+};
 
 // Read single file from user
 export const readSingleFile = (files, callback) => {
@@ -66,13 +80,13 @@ export const getMatchBetweenPattern = (text, pattern) => {
   ).exec(text)[0];
 };
 
-// resource mapping from df-caninstall.yml
+// resource mapping from dfcaninstall.yml
 export const mapResources = (data) => {
   let resources = data.map((s) => {
     return { name: s.split(" ")[0], state: s.split(" ")[1] };
   });
 
-  const min_memory_mb = 63000; // 64GB required, but AWS instances report 63xxx MB available
+  const min_memory_mb = df_min_memory;
   const min_swap_mb = Math.ceil(
     resources.find((r) => r.name === "memory").state * 0.2
   );
@@ -82,7 +96,8 @@ export const mapResources = (data) => {
     resources.find((r) => r.name === "swap").state > min_swap_mb;
   const has_available_disks =
     resources.find((r) => r.name === "disks").state !== "";
-  const has_enough_cores = resources.find((r) => r.name === "cores").state > 16;
+  const has_enough_cores =
+    resources.find((r) => r.name === "cores").state >= df_min_cores;
 
   let res = resources.map((r) => {
     switch (r.name) {

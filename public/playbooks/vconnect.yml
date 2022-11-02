@@ -13,7 +13,7 @@
       delegate_to: localhost
       register: result
 
-    - debug: msg="VCONNECT={{ result['datacenter_info'] }}END_VCONNECT"
+    - debug: msg="VCONNECT=={{ result['datacenter_info'] }}==END_VCONNECT"
 
     # - name: Gather information about all datastores
     #   community.vmware.vmware_datastore_info:

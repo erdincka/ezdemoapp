@@ -2,6 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const isDev = require("electron-is-dev");
 const { getAppDataFilePath } = require("./lib/helpers");
+const { vmwareSession, vmwareGet } = require("./lib/vmwareclient");
 
 const playbook_dir = isDev
   ? path.join(__dirname, "playbooks")
@@ -64,12 +65,6 @@ exports.ansiblePlay = (event, args) => {
   command.exec();
 };
 
-exports.pythonExec = (_, script) => {
-  console.dir("Will be Running python script", script);
-  // const { spawn } = require("child_process");
-  // return spawn("python3", [script]);
-};
-
 exports.getCredentials = (_, provider) => {
   console.dir("Called getCredentials: " + provider);
   const config_file = getAppDataFilePath(`/${provider}.json`);
@@ -103,4 +98,17 @@ exports.getPrivateKey = (_) => {
     if (error.code === "ENOENT") console.error(privatekey_file + " not found");
   }
   return data;
+};
+
+exports.queryVcenter = (_, args) => {
+  console.dir("Called vcenter");
+  console.dir(args);
+  switch (args.request) {
+    case "session":
+      return vmwareSession(args.address, args.username, args.password);
+
+    default:
+      return vmwareGet(args.address, args.session, args.request);
+    // break;
+  }
 };

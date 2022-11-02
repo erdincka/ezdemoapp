@@ -1,5 +1,5 @@
 // Import required AWS SDK clients and commands for Node.js
-import { ec2Client } from "./ec2Client";
+import { ec2Client } from "./oldec2Client";
 const {
   CreateTagsCommand,
   RunInstancesCommand,
@@ -17,7 +17,7 @@ export const createInstance = async (Name, AMI_ID, InstanceType, KeyName) => {
     MinCount: 1,
     MaxCount: 1,
   };
-  
+
   try {
     const data = await ec2Client.send(new RunInstancesCommand(instanceParams));
     console.log(data.Instances[0].InstanceId);

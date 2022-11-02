@@ -7,6 +7,7 @@ import { DataFabric } from "./DataFabric";
 import { MLOps } from "./MLOps";
 import { Home } from "./Home";
 import { DataFabricCard } from "./lib/DataFabricCard";
+import { VmCard } from "./lib/Vmware/VmCard";
 
 const router = createBrowserRouter([
   {

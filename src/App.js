@@ -107,7 +107,7 @@ export function App() {
           buttons={[refreshButton, debugButton, modeButton, themeButton]}
         />
         {errorBar(error, setError)}
-        <Box width={{ max: "xxlarge" }} margin="auto" fill>
+        <Box width={{ width: "100%" }} height={{ min: "82%" }} margin="auto">
           <Outlet />
 
           {debug && <LogViewer lines={output} />}

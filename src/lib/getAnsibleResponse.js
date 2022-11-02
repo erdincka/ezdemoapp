@@ -18,18 +18,21 @@ export const getAnsibleResponse = (output, play) => {
   let promise = new Promise((resolve, reject) => {
     if (task_finished) {
       if (task_success) {
-        console.dir("successful promise");
-        resolve(
-          JSON.parse(
-            getMatchBetweenPattern(
-              output.join(""),
-              play.toUpperCase()
-            ).replaceAll("'", '"')
-          )
-        );
+        const result = getMatchBetweenPattern(
+          output.join(""),
+          play.toUpperCase()
+        ).replaceAll("'", '"');
+
+        console.dir("resolved to" + result);
+        resolve(JSON.parse(result));
       } else {
-        console.dir("failed promise");
-        reject(getMatchBetweenRegex(output.join(""), '"msg": "', '"[,}]'));
+        const error = getMatchBetweenRegex(
+          output.join(""),
+          '"msg": "',
+          '"[,}]'
+        );
+        console.dir("failed promise" + error);
+        reject(error);
       }
     }
   });

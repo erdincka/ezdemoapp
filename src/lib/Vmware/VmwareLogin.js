@@ -1,19 +1,18 @@
-import { Button, Form, FormField, Spinner, TextInput } from "grommet";
+import { Button, Form, FormField, Spinner, Text, TextInput } from "grommet";
 import { useContext, useEffect, useState } from "react";
 import { AppContext } from "../../ContextProviders";
-import { getAnsibleResponse } from "../getAnsibleResponse";
-import { runAnsible } from "../Utils";
+// import { getAnsibleResponse } from "../getAnsibleResponse";
 
-export function VmwareLogin() {
+export function VmwareLogin({ onSuccess }) {
   const [credentials, setCredentials] = useState({
     address: "",
     username: "",
     password: "",
   });
   const [wait, setWait] = useState(false);
+  const [error, setError] = useState();
 
-  const { output, setOutput, client, setClient, setError } =
-    useContext(AppContext);
+  const { client } = useContext(AppContext);
 
   // get saved credentials
   useEffect(() => {
@@ -27,31 +26,40 @@ export function VmwareLogin() {
       .catch((e) => console.error(e));
   }, []);
 
-  useEffect(() => {
-    if (wait && output.length > 0) {
-      getAnsibleResponse(output, "vconnect")
-        .then((data) => {
-          console.dir(data);
-          setClient(data);
-          setWait(false);
-        })
-        .catch((error) => {
-          setError((prev) => [...prev, error]);
-          setWait(false);
-        });
-    }
-  }, [output, setClient, setError, wait]);
+  // useEffect(() => {
+  //   if (wait) {
+  //     getAnsibleResponse(output, "vconnect")
+  //       .then((data) => {
+  //         onSuccess({ ...credentials, ...data });
+  //       })
+  //       .catch((error) => {
+  //         setError(error);
+  //       })
+  //       .finally(() => {
+  //         setWait(false);
+  //       });
+  //   }
+  // }, [credentials, onSuccess, output, setError, wait]);
 
   const handleSubmit = () => {
     setWait(true);
-    setOutput([]);
+    setError(false);
+    // setOutput([]);
 
     const vars = {
       address: credentials.address,
       username: credentials.username,
       password: credentials.password,
     };
-    runAnsible("vconnect", vars);
+    window.ezdemoAPI
+      .queryVcenter({ request: "session", ...vars })
+      .then((result) => {
+        if (result.error) setError(result.error.message);
+        else if (result.value.error_type) setError(result.value.error_type);
+        else onSuccess({ ...vars, session: result.value });
+      })
+      .catch((error) => setError(error))
+      .finally(() => setWait(false));
     window.ezdemoAPI.saveCredentials({ vmware: credentials });
   };
 
@@ -99,6 +107,7 @@ export function VmwareLogin() {
         disabled={wait}
         type="submit"
       />
+      {error && <Text color="status-critical">{JSON.stringify(error)}</Text>}
     </Form>
   );
 }

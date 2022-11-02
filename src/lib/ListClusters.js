@@ -10,7 +10,7 @@ import {
   PageHeader,
   Spinner,
 } from "grommet";
-import { Cluster, FormAdd, More } from "grommet-icons";
+import { Add, Cluster, More } from "grommet-icons";
 import { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppContext } from "../ContextProviders";
@@ -32,31 +32,75 @@ export const ListClusters = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    const clusters = JSON.parse(localStorage.getItem("clusters"));
+    if (clusters) {
+      setClusters(clusters);
+    }
+  }, []);
+
+  useEffect(() => {
     if (waitForHost && output.length > 0) {
-      if (ansibleRunFor === "dfservices") {
-        getAnsibleResponse(output, "dfservices")
-          .then((data) => {
-            let servicesStatus = data.map((s) => {
-              return { name: s.split(" ")[0], state: s.split(" ")[1] };
+      switch (ansibleRunFor) {
+        case "dfservices":
+          getAnsibleResponse(output, "dfservices")
+            .then((data) => {
+              let servicesStatus = data.map((s) => {
+                return {
+                  name: s.split(" ")[0],
+                  state: s.split(" ")[1],
+                };
+              });
+
+              setClusters((prev) =>
+                prev.map((o) =>
+                  o.address === waitForHost.address &&
+                  o.username === waitForHost.username
+                    ? {
+                        ...waitForHost,
+                        services: servicesStatus,
+                      }
+                    : o
+                )
+              );
+              localStorage.setItem("clusters", JSON.stringify(clusters));
+              setWaitForHost(false);
+            })
+            .catch((error) => {
+              setError((prev) => [...prev, error]);
+              setWaitForHost(false);
             });
 
-            setClusters((prev) =>
-              prev.map((o) =>
-                o.address === waitForHost.address &&
-                o.username === waitForHost.username
-                  ? {
-                      ...waitForHost,
-                      services: servicesStatus,
-                    }
-                  : o
-              )
-            );
-            setWaitForHost(false);
-          })
-          .catch((error) => {
-            setError((prev) => [...prev, error]);
-            setWaitForHost(false);
-          });
+          break;
+
+        case "dfclient":
+          getAnsibleResponse(output, "dfclient")
+            .then((data) => {
+              if (data) {
+                setClusters((prev) =>
+                  prev.map((o) =>
+                    o.address === waitForHost.address &&
+                    o.username === waitForHost.username
+                      ? {
+                          ...waitForHost,
+                          services: [
+                            { name: "dummy service", state: "active" },
+                          ],
+                        }
+                      : o
+                  )
+                );
+              }
+              setWaitForHost(false);
+            })
+            .catch((error) => {
+              setError((prev) => [...prev, error]);
+              setWaitForHost(false);
+            });
+
+          break;
+
+        default:
+          break;
       }
     }
   }, [ansibleRunFor, clusters, output, setError, waitForHost]);
@@ -65,28 +109,30 @@ export const ListClusters = () => {
     setOutput([]);
     setWaitForHost(host);
     setAnsibleRunFor(play);
-    runAnsible(play, { address: host.address, username: host.username }); // just send needed vars to ansible
+    runAnsible(play, host);
   };
 
   const removeCluster = (c) => {
-    setClusters((prev) =>
-      prev.filter(
+    setClusters((prev) => {
+      let removedList = prev.filter(
         (o) => !(o.address === c.address && o.username === c.username)
-      )
-    );
+      );
+      localStorage.setItem("clusters", JSON.stringify(removedList));
+      return removedList;
+    });
   };
 
+  const isClusterHealthy = (host) =>
+    host.services &&
+    host.services.length > 0 &&
+    host.services.every((s) => s.state === "active");
   return (
     <Page>
       <PageHeader
         title="Clusters"
         parent={<ReverseAnchor label="Home" onClick={() => navigate(-1)} />}
         actions={
-          <Button
-            icon={<FormAdd />}
-            secondary
-            onClick={() => setPopup("clusterconnect")}
-          />
+          <Button icon={<Add />} onClick={() => setPopup("clusterconnect")} />
         }
         pad={{ vertical: "medium" }}
       />
@@ -99,8 +145,7 @@ export const ListClusters = () => {
             <Box direction="row" gap="small" align="center">
               {waitForHost?.address === item.address ? (
                 <Spinner />
-              ) : item.services?.length > 0 &&
-                item.services.every((s) => s.state === "active") ? (
+              ) : isClusterHealthy(item) ? (
                 goodIcon
               ) : (
                 badIcon
@@ -125,6 +170,10 @@ export const ListClusters = () => {
                     onClick: () =>
                       runAnsibleFor("dfservices", { ...item, services: null }),
                   },
+                  {
+                    label: "Configure client",
+                    onClick: () => runAnsibleFor("dfclient", item),
+                  },
                 ],
                 [
                   {
@@ -141,6 +190,7 @@ export const ListClusters = () => {
           <Anchor
             weight="bold"
             key={index}
+            // disabled={!isClusterHealthy(datum)}
             onClick={() => {
               navigate("/datafabric/" + datum.address);
             }}
@@ -149,6 +199,7 @@ export const ListClusters = () => {
           </Anchor>
         )}
       </List>
+
       {popup === "clusterconnect" && (
         <Popup
           title="Sign in"
