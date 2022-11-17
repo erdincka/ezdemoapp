@@ -14,7 +14,7 @@ pip3 install pyvmomi
 
 ## Run in development setting
 
-install (nodejs)[https://nodejs.org/en/download/] & (yarn)[https://yarnpkg.com/getting-started/install].
+install [nodejs](https://nodejs.org/en/download/) & [yarn](https://yarnpkg.com/getting-started/install).
 
 ```sh
 git clone https://github.com/erdincka/ezdemoapp.git
@@ -24,7 +24,7 @@ yarn dev
 
 ## Run the app
 
-Download from (release page)[https://github.com/erdincka/ezdemoapp/releases].
+Download from [release page](https://github.com/erdincka/ezdemoapp/releases).
 
 Start the app EzDemo (wherever it is installed).
 
