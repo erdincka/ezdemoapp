@@ -3,14 +3,14 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { prism } from "grommet-theme-hpe";
 import { useContext, useState } from "react";
 
-export const LogViewer = ({ lines }) => {
+export const LogViewer = ({ lines, header = "Task Output" }) => {
   const [full, setFull] = useState(false);
   const theme = useContext(ThemeContext);
 
   return (
     <Box style={{ fontSize: "small" }} height="medium">
       <Box direction="row" justify="between" align="center">
-        <Heading level={4}>Task Output</Heading>
+        <Heading level={4}>{header}</Heading>
         <CheckBox
           reverse
           pad="none"

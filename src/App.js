@@ -84,7 +84,7 @@ export function App() {
 
   const debugButton = (
     <Button
-      tip="Advanced / Basic"
+      tip="Show / Hide output"
       key="debug"
       icon={debug ? <Code /> : <AppsRounded />}
       onClick={() => setDebug(!debug)}

@@ -1,7 +1,18 @@
 #!/usr/bin/python3
 
+import signal
+
 ### CONFIGURE
 from settings import *
+table_name = "satellite"
+topic_name = "satellite"
+
+# Handle CTRL-C to close connections
+def handler(signum, frame):
+    print("FINISHED")
+    print("Messages sent: {}".format(index))
+    exit(0)
+signal.signal(signal.SIGINT, handler)
 
 # Get Dst index from CDAWeb HAPI server
 import json
@@ -13,7 +24,7 @@ from time import sleep
 # Kafka Producer for event streams
 from confluent_kafka import Producer
 
-p = Producer({"streams.producer.default.stream": stream_name})
+p = Producer({'streams.producer.default.stream': '/apps/demo/hapi'})
 
 # Timeformat helpers
 def datetime2hapitime(time):
@@ -22,7 +33,6 @@ def datetime2hapitime(time):
 
 def getnextday(hapitime):
     return (hapitime2datetime(hapitime) + timedelta(days=1))[0]
-
 
 def notification_from_metadata(meta):
     # Metadata example
@@ -38,10 +48,10 @@ def notification_from_metadata(meta):
 
 
 # Data will be saved in Data Fabric using Fuse (filesystem)
-DFROOT = "/mapr/{}/user/mapr/data".format(cluster_name)
+DFROOT = "/apps/demo/hapi"
 CACHEDIR = os.path.join(
-    DFROOT, "hapi-data"
-)  # this should exist with write permission to others
+    DFROOT, "satellite-data"
+)
 
 # Hapi client settings
 server = "https://vires.services/hapi"
@@ -55,10 +65,10 @@ opts = {"logging": True, "cachedir": CACHEDIR}
 from mapr.ojai.storage.ConnectionFactory import ConnectionFactory
 
 connection_str = (
-    "{}:5678?auth=basic;user=mapr;password=mapr;"
+    "{}:5678?auth=basic;user=mapr;password={};"
     "ssl=true;"
     "sslCA=/opt/mapr/conf/ssl_truststore.pem;"
-    "sslTargetNameOverride={}".format(internal_hostname, internal_hostname)
+    "sslTargetNameOverride={}".format(internal_hostname, admin_password, internal_hostname)
 )
 connection = ConnectionFactory.get_connection(connection_str=connection_str)
 if connection.is_store_exists(table_name):
@@ -67,8 +77,11 @@ else:
     store = connection.create_store(table_name)
 
 # Get data
+index = 0
+delay = 3
+iteration = 20
 
-while True:
+while index < iteration:
 
     data, meta = hapi(server, dataset, parameters, start, stop, **opts)
 
@@ -76,12 +89,13 @@ while True:
     if meta["status"]["code"] == 1200:
         ## send notification to Event Stream
         cleaned = notification_from_metadata(meta)
-        p.produce("hapi", json.dumps(cleaned).encode("utf-8"))
+        p.produce(topic_name, json.dumps(cleaned).encode("utf-8"))
         p.flush()
 
         ## send metadata to table
+        meta["_id"]=index
         packed = json.dumps(meta)
-        new_document = connection.new_document(dictionary=packed)
+        new_document = connection.new_document(json_string=packed)
         store.insert_or_replace(new_document)
 
     # Plot all parameters
@@ -92,6 +106,8 @@ while True:
     start = stop
     stop = datetime2hapitime(getnextday(start))
     # repeat after a delay
-    sleep(30)
+    index += 1
+    sleep(delay)
 
 connection.close()
+print("FINISHED")

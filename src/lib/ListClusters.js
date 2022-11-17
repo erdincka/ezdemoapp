@@ -8,9 +8,12 @@ import {
   NameValuePair,
   Page,
   PageHeader,
+  Paragraph,
   Spinner,
+  Text,
+  Tip,
 } from "grommet";
-import { Add, Cluster, More } from "grommet-icons";
+import { Add, Cluster, More, Refresh } from "grommet-icons";
 import { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppContext } from "../ContextProviders";
@@ -18,7 +21,7 @@ import { getAnsibleResponse } from "./getAnsibleResponse";
 import { Popup } from "./Popup";
 import { ReverseAnchor } from "./ReverseAnchor";
 import { ServerConnect } from "./ServerConnect";
-import { badIcon, goodIcon, runAnsible } from "./Utils";
+import { addOrUpdate, badIcon, goodIcon, runAnsible, warnIcon } from "./Utils";
 
 export const ListClusters = () => {
   const [clusters, setClusters] = useState([]);
@@ -26,11 +29,12 @@ export const ListClusters = () => {
   const [popup, setPopup] = useState();
   const [ansibleRunFor, setAnsibleRunFor] = useState();
 
-  const { connection, setConnection, output, setOutput, setError } =
+  const { connection, output, setOutput, setError, learning } =
     useContext(AppContext);
 
   const navigate = useNavigate();
 
+  // get saved clusters if any
   useEffect(() => {
     const clusters = JSON.parse(localStorage.getItem("clusters"));
     if (clusters) {
@@ -38,35 +42,37 @@ export const ListClusters = () => {
     }
   }, []);
 
+  // monitor output
   useEffect(() => {
     if (waitForHost && output.length > 0) {
       switch (ansibleRunFor) {
         case "dfservices":
           getAnsibleResponse(output, "dfservices")
             .then((data) => {
-              let servicesStatus = data.map((s) => {
+              const servicesStatus = data.map((s) => {
                 return {
                   name: s.split(" ")[0],
                   state: s.split(" ")[1],
                 };
               });
 
-              setClusters((prev) =>
-                prev.map((o) =>
-                  o.address === waitForHost.address &&
-                  o.username === waitForHost.username
-                    ? {
-                        ...waitForHost,
-                        services: servicesStatus,
-                      }
-                    : o
-                )
+              const newClusters = clusters.map((o) =>
+                o.address === waitForHost.address &&
+                o.username === waitForHost.username
+                  ? {
+                      ...o,
+                      services: servicesStatus,
+                    }
+                  : o
               );
-              localStorage.setItem("clusters", JSON.stringify(clusters));
-              setWaitForHost(false);
+
+              setClusters(newClusters);
+              localStorage.setItem("clusters", JSON.stringify(newClusters));
             })
             .catch((error) => {
               setError((prev) => [...prev, error]);
+            })
+            .finally(() => {
               setWaitForHost(false);
             });
 
@@ -76,24 +82,38 @@ export const ListClusters = () => {
           getAnsibleResponse(output, "dfclient")
             .then((data) => {
               if (data) {
-                setClusters((prev) =>
-                  prev.map((o) =>
-                    o.address === waitForHost.address &&
-                    o.username === waitForHost.username
-                      ? {
-                          ...waitForHost,
-                          services: [
-                            { name: "dummy service", state: "active" },
-                          ],
-                        }
-                      : o
-                  )
+                const updatedClusters = addOrUpdate(
+                  clusters,
+                  "address",
+                  waitForHost.address,
+                  {
+                    ...waitForHost,
+                    cluster_name: data[0],
+                    fqdn: data[1],
+                    status: "configured",
+                  }
                 );
+                saveClusters(updatedClusters);
               }
-              setWaitForHost(false);
             })
             .catch((error) => {
               setError((prev) => [...prev, error]);
+            })
+            .finally(() => {
+              setWaitForHost(false);
+            });
+
+          break;
+
+        case "dfrefresh":
+          getAnsibleResponse(output, "dfrefresh")
+            .then((data) => {
+              if (data) console.dir(data); // refresh succesful
+            })
+            .catch((error) => {
+              setError((prev) => [...prev, error]);
+            })
+            .finally(() => {
               setWaitForHost(false);
             });
 
@@ -105,11 +125,32 @@ export const ListClusters = () => {
     }
   }, [ansibleRunFor, clusters, output, setError, waitForHost]);
 
+  const saveClusters = (newList) => {
+    setClusters(newList);
+    localStorage.setItem("clusters", JSON.stringify(newList));
+  };
+
+  const refreshClusters = () => {
+    const newList = JSON.parse(localStorage.getItem("clusters"));
+    setClusters(newList);
+  };
+
   const runAnsibleFor = (play, host) => {
+    host = { ...host, status: "configuring" };
     setOutput([]);
     setWaitForHost(host);
     setAnsibleRunFor(play);
-    runAnsible(play, host);
+    if (runAnsible(play, host)) {
+      if (play === "dfclient") {
+        let updatedClusters = addOrUpdate(
+          clusters,
+          "address",
+          host.address,
+          host
+        );
+        saveClusters(updatedClusters);
+      }
+    }
   };
 
   const removeCluster = (c) => {
@@ -122,56 +163,88 @@ export const ListClusters = () => {
     });
   };
 
-  const isClusterHealthy = (host) =>
-    host.services &&
-    host.services.length > 0 &&
-    host.services.every((s) => s.state === "active");
+  // const isClusterHealthy = (host) =>
+  //   host.services &&
+  //   host.services.length > 0 &&
+  //   host.services.every((s) => s.state === "active");
+
   return (
     <Page>
       <PageHeader
         title="Clusters"
+        subtitle="Use an existing clusters"
         parent={<ReverseAnchor label="Home" onClick={() => navigate(-1)} />}
         actions={
-          <Button icon={<Add />} onClick={() => setPopup("clusterconnect")} />
+          <Box gap="small" margin="none" direction="row">
+            <Button icon={<Add />} onClick={() => setPopup("clusterconnect")} />
+            <Button icon={<Refresh />} onClick={() => refreshClusters()} />
+          </Box>
         }
         pad={{ vertical: "medium" }}
       />
 
+      {learning && (
+        <Box>
+          <Paragraph fill>
+            You can use existing Data Fabric clusters by adding them to the
+            list, and configuring for use cases.
+          </Paragraph>
+          <Paragraph fill>
+            If status icon is not green, please select the menu on the right of
+            the cluster you wish to use, and "Configure". This will install
+            example code to use for the demo use cases, and create required
+            streams, tables & folders on Data Fabric.
+          </Paragraph>
+          <Paragraph fill>
+            Once the configuration is done, you can open the Data Fabric Cluster
+            page by clicking on the cluster name.
+          </Paragraph>
+        </Box>
+      )}
       <List
         border="horizontal"
         data={clusters}
         action={(item, index) => (
           <Box key={index} direction="row" align="between" gap="medium">
             <Box direction="row" gap="small" align="center">
-              {waitForHost?.address === item.address ? (
-                <Spinner />
-              ) : isClusterHealthy(item) ? (
-                goodIcon
-              ) : (
-                badIcon
-              )}
+              {/* {isClusterHealthy(item) ? goodIcon : badIcon}
               <Anchor
                 color="text-weak"
                 onClick={() => {
                   setConnection(item);
                   setPopup("clusterview");
                 }}
-              >
-                {item?.services ? "Checked" : "Not checked"}
-              </Anchor>
+                label="Services"
+              /> */}
+
+              {item.status === "configured" ? (
+                <Tip content="Ready">{goodIcon}</Tip>
+              ) : (
+                <Tip content="Configuration needed!">{warnIcon}</Tip>
+              )}
+
+              <Text gap="none" color="text-weak">
+                {item.status}
+              </Text>
             </Box>
             <Menu
-              icon={<More />}
+              icon={
+                waitForHost?.address === item.address ? <Spinner /> : <More />
+              }
               hoverIndicator
               items={[
                 [
+                  // {
+                  //   label: "Refresh",
+                  //   onClick: () => runAnsibleFor("dfrefresh", item),
+                  // },
+                  // {
+                  //   label: "Check services",
+                  //   onClick: () =>
+                  //     runAnsibleFor("dfservices", { ...item, services: null }),
+                  // },
                   {
-                    label: "Check services",
-                    onClick: () =>
-                      runAnsibleFor("dfservices", { ...item, services: null }),
-                  },
-                  {
-                    label: "Configure client",
+                    label: "Configure",
                     onClick: () => runAnsibleFor("dfclient", item),
                   },
                 ],
@@ -195,7 +268,7 @@ export const ListClusters = () => {
               navigate("/datafabric/" + datum.address);
             }}
           >
-            {datum.address}
+            {datum.cluster_name || datum.address}
           </Anchor>
         )}
       </List>
@@ -210,7 +283,13 @@ export const ListClusters = () => {
               onConnect={(c) => {
                 setPopup(false);
                 setOutput([]);
-                if (c) setClusters((old) => [...old, c]);
+                if (c) {
+                  setClusters((old) => [...old, c]);
+                  localStorage.setItem(
+                    "clusters",
+                    JSON.stringify([...clusters, c])
+                  );
+                }
               }}
             />
           }

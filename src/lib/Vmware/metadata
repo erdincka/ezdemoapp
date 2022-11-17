@@ -1,0 +1,9 @@
+instance-id: ezdemo-vm-1
+local hostname: ezdemo-vm-1
+network:
+  version: 2
+  ethernets:
+    nics:
+      match:
+        name: eth*
+      dhcp4: yes

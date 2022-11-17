@@ -1,20 +1,17 @@
-import {
-  Anchor,
-  Button,
-  NameValueList,
-  NameValuePair,
-  Page,
-  PageHeader,
-  Text,
-} from "grommet";
+import { Box, Button, Heading, Page, PageHeader, Text } from "grommet";
 import { Ezmeral } from "grommet-icons";
 import { useNavigate, useParams } from "react-router-dom";
+import { DataFabricUseCases } from "./DataFabricUseCases";
 import { ReverseAnchor } from "./ReverseAnchor";
-import { copyToClipboard } from "./Utils";
+import { BrowserLink, copyToClipboard } from "./Utils";
 
 export const DataFabricCard = () => {
   const { address } = useParams();
   const navigate = useNavigate();
+
+  const clusters = JSON.parse(localStorage.getItem("clusters"));
+  const getClusterHost = (addr) => clusters.find((c) => c.address === addr);
+  // const fqdn = getClusterHost(address).fqdn;
 
   const services = [
     { name: "Installer", url: `https://${address}:9443/` },
@@ -34,10 +31,13 @@ export const DataFabricCard = () => {
     { name: "Kibana", url: `https://${address}:5601/` },
   ];
 
+  const getClusterName = (address) =>
+    getClusterHost(address).cluster_name || address;
+
   return (
     <Page pad={{ horizontal: "medium" }}>
       <PageHeader
-        title={address}
+        title={getClusterName(address)}
         parent={<ReverseAnchor label="Back" onClick={() => navigate(-1)} />}
         actions={
           <Button
@@ -47,33 +47,21 @@ export const DataFabricCard = () => {
         }
         pad={{ vertical: "medium" }}
       />
-
-      <NameValueList>
+      <Heading level={5}>Endpoints</Heading>
+      <Box fill="horizontal" direction="row" gap="small" justify="between">
         {services.map((service) => (
-          <NameValuePair name={service.name} key={service.name}>
-            <Anchor
-              target="_blank"
-              rel="noopener"
-              label={service.url}
-              onClick={() => {
-                window.ezdemoAPI.openInBrowser(service.url);
-              }}
-              // icon={<NewWindow />}
-            />
-            {/* <Anchor
-              label={service.url}
-              href={service.url}
-              target="_blank"
-              rel="noopener"
-            /> */}
-          </NameValuePair>
+          <BrowserLink
+            key={service.name}
+            label={service.name}
+            url={service.url}
+          />
         ))}
-      </NameValueList>
-      <Text color="text-weak">(*) NiFi username: mapr</Text>
-      <Text color="text-weak">
-        NiFi password: "mapruserwithmapr", replace trailing "mapr" with your
-        admin password.
+      </Box>
+      <Text alignSelf="end" color="text-weak">
+        (*) NiFi credentials: admin/nifiadminpass
       </Text>
+      <Heading level={5}>Use Cases</Heading>
+      <DataFabricUseCases host={getClusterHost(address)} />
     </Page>
   );
 };

@@ -1,8 +1,12 @@
-import { Box, Notification, Text } from "grommet";
-import { StatusCriticalSmall, StatusGoodSmall } from "grommet-icons";
+import { Anchor, Box, Button, Notification, Text } from "grommet";
+import {
+  StatusCriticalSmall,
+  StatusGoodSmall,
+  StatusWarningSmall,
+} from "grommet-icons";
 
-export const df_min_cores = 16;
-export const df_min_memory = 63000; // 64GB required, but AWS instances report 63xxx MB available
+export const df_min_cores = 8;
+export const df_min_memory = 63000; // 64GB recommended, but AWS instances report 63xxx MB available
 
 export const Identifier = ({ title, subtitle, content, icon }) => {
   return (
@@ -25,6 +29,9 @@ export const Identifier = ({ title, subtitle, content, icon }) => {
 };
 
 export const goodIcon = <StatusGoodSmall color="status-ok" size="small" />;
+export const warnIcon = (
+  <StatusWarningSmall color="status-warning" size="small" />
+);
 export const badIcon = (
   <StatusCriticalSmall color="status-critical" size="small" />
 );
@@ -75,9 +82,9 @@ export const getMatchBetweenRegex = (text, start, end) => {
 export const getMatchBetweenPattern = (text, pattern) => {
   let start = `${pattern}==`;
   let end = `==END_${pattern}`;
-  return RegExp(
+  return (RegExp(
     "(?<=" + start + ")" + /[\s\S]*?/.source + "(?=" + end + ")"
-  ).exec(text)[0];
+  ).exec(text) || [null])[0];
 };
 
 // resource mapping from dfcaninstall.yml
@@ -127,4 +134,36 @@ export const runAnsible = (playbook, vars) => {
     window.ezdemoAPI.ansiblePlay([playbook, vars]);
     return true;
   } else return false;
+};
+
+export const BrowserLink = ({
+  url,
+  label,
+  disabled = false,
+  icon = undefined,
+}) => {
+  return icon ? (
+    <Button
+      icon={icon}
+      label={label}
+      onClick={() => window.ezdemoAPI.openInBrowser(url)}
+    />
+  ) : (
+    <Anchor
+      label={label}
+      target="_blank"
+      rel="noopener"
+      onClick={() => window.ezdemoAPI.openInBrowser(url)}
+    />
+  );
+};
+
+// updates for state objects, modify object property for a list of objects
+export const addOrUpdate = (list, param, compareTo, newItem) => {
+  if (list)
+    if (list.some((i) => i[param] === compareTo))
+      return list.map((i) => (i[param] === compareTo ? newItem : i));
+    else list.push(newItem);
+  else list = [newItem];
+  return list;
 };

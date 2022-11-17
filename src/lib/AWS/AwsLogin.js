@@ -12,14 +12,16 @@ export function AwsLogin({ onSuccess }) {
 
   // get saved credentials
   useEffect(() => {
-    window.ezdemoAPI
-      .getCredentials("aws")
-      .then((c) => {
-        if (c) {
-          setCredentials(JSON.parse(c));
-        }
-      })
-      .catch((e) => console.error(e));
+    const storedCredentials = JSON.parse(localStorage.getItem("aws"));
+    if (storedCredentials) setCredentials(storedCredentials);
+    // window.ezdemoAPI
+    //   .getCredentials("aws")
+    //   .then((c) => {
+    //     if (c) {
+    //       setCredentials(JSON.parse(c));
+    //     }
+    //   })
+    //   .catch((e) => console.error(e));
   }, []);
 
   const handleSubmit = () => {
@@ -35,7 +37,8 @@ export function AwsLogin({ onSuccess }) {
           // setClient((old) => {
           //   return { ...old, aws: client };
           // });
-          window.ezdemoAPI.saveCredentials({ aws: credentials });
+          // window.ezdemoAPI.saveCredentials({ aws: credentials });
+          localStorage.setItem("aws", JSON.stringify(credentials));
           setWait(false);
         }
       })

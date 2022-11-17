@@ -4,8 +4,9 @@
   gather_facts: true
   vars:
     mapr_repo: "https://package.mapr.hpe.com/releases"
-    cluster_name: "{{ my_cluster_name | default('demo') }}.df.demo"
-    admin_password: "mapr"
+    cluster_name: "{{ my_cluster_name | default('my') }}.df.demo"
+    admin_password: "{{ my_admin_password | default('mapr') }}"
+    internal_hostname: "{{ groups['target'] | map ('extract', hostvars, 'ansible_fqdn') }}"
 
   tasks:
     - name: set uid for /sbin/unix_chkpwd
@@ -47,7 +48,10 @@
 
     - name: get host public IP
       shell: "curl http://ifconfig.me"
-      register: public_ip
+      register: result
+
+    - set_fact:
+        public_ip: "{{ result.stdout }}"
 
     - set_fact:
         stanza_file: |
@@ -55,8 +59,8 @@
             mapr_core_version: 7.1.0
           config:
             hosts:
-              {{ groups['target'] | map ('extract', hostvars, 'ansible_fqdn') | to_nice_yaml | indent(4) }}
-            mapr_external: {{ groups['target'] | map ('extract', hostvars, 'ansible_fqdn') | first }}:{{ public_ip.stdout }}
+              {{ internal_hostname | to_nice_yaml | indent(4) }}
+            mapr_external: {{ groups['target'] | map ('extract', hostvars, 'ansible_fqdn') | first }}:{{ public_ip }}
             ssh_id: {{ ansible_user_id }}
             ssh_key_file: {{ ansible_user_dir }}/key.pem
             cluster_name: {{ cluster_name }}
@@ -100,6 +104,8 @@
                 enabled: true
               mapr-zeppelin:
                 enabled: true
+              mapr-livy:
+                enabled: true
 
     - name: stanza
       copy:
@@ -128,35 +134,22 @@
     - name: update nifi for proxied access (ie, aws public ip)
       ansible.builtin.lineinfile:
         path: "{{ nifi_path.stdout }}/conf/nifi.properties"
-        line: "nifi.web.proxy.host={{ public_ip.stdout }}:12443"
+        line: "nifi.web.proxy.host={{ public_ip }}:12443"
         regex: "^nifi.web.proxy.host="
       become: true
       register: nifi_reconfigured
 
     - name: update nifi username and password
-      shell: "{{ nifi_path.stdout }}/bin/nifi.sh set-single-user-credentials mapr mapruserwith{{ admin_password }}"
-
-    - name: restart nifi if needed
-      shell: "{{ nifi_path.stdout }}/bin/nifi.sh restart"
+      shell: "{{ nifi_path.stdout }}/bin/nifi.sh set-single-user-credentials admin nifiadminpass"
       become: true
 
-    ### TODO: this shouldn't be required with the installer
-    - name: configure hivemeta
-      shell: |
-        /opt/mapr/hive/hive-3.1.3/bin/schematool -dbType mysql -initSchema
-        maprcli node services -name hivemeta -action start -nodes $(hostname -f)
+    - name: restart nifi
+      shell: "{{ nifi_path.stdout }}/bin/nifi.sh restart"
       become: true
 
     - name: wait for MCS
       wait_for:
         port: 8443
-
-    # - name: set public IP
-    #   shell: |
-    #     grep -v "MAPR_EXTERNAL" /opt/mapr/conf/env_override.sh | tee /opt/mapr/conf/env_override.sh
-    #     echo "export MAPR_EXTERNAL={{ public_ip.stdout }}" | tee -a /opt/mapr/conf/env_override.sh
-    #     /opt/mapr/server/configure.sh -R
-    #   become: true
 
     - name: create ticket for user
       shell: "[ -f /tmp/maprticket_${UID} ] || (echo {{ admin_password }} | maprlogin password -user mapr)"
@@ -173,5 +166,20 @@
         - licensed.rc != 0
         - "'license exists' not in licensed.stdout"
 
+    ### TODO: this shouldn't be required with the installer
+    - name: configure hivemeta
+      shell: |
+        /opt/mapr/hive/hive-3.1.3/bin/schematool -dbType mysql -initSchema
+        maprcli node services -name hivemeta -action start -nodes $(hostname -f)
+        maprcli node services -name spark-thriftserver -action start -nodes $(hostname -f)
+      become: true
+
+    - name: update /etc/hosts on localhost
+      local_action:
+        module: ansible.builtin.lineinfile
+        path: /etc/hosts
+        line: "{{ public_ip }} {{ internal_hostname | join(' ') }}"
+      become: true
+
     - name: result
-      debug: msg="DFINSTALL=={{ install_run.stdout_lines }}==END_DFINSTALL"
+      debug: msg="DFINSTALL=={{ [cluster_name] }}==END_DFINSTALL"

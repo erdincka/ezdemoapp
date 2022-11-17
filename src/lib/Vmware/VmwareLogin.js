@@ -16,14 +16,17 @@ export function VmwareLogin({ onSuccess }) {
 
   // get saved credentials
   useEffect(() => {
-    window.ezdemoAPI
-      .getCredentials("vmware")
-      .then((c) => {
-        if (c) {
-          setCredentials(JSON.parse(c));
-        }
-      })
-      .catch((e) => console.error(e));
+    const storedCredentials = JSON.parse(localStorage.getItem("vmware"));
+    if (storedCredentials) setCredentials(storedCredentials);
+
+    // window.ezdemoAPI
+    //   .getCredentials("vmware")
+    //   .then((c) => {
+    //     if (c) {
+    //       setCredentials(JSON.parse(c));
+    //     }
+    //   })
+    //   .catch((e) => console.error(e));
   }, []);
 
   // useEffect(() => {
@@ -60,7 +63,8 @@ export function VmwareLogin({ onSuccess }) {
       })
       .catch((error) => setError(error))
       .finally(() => setWait(false));
-    window.ezdemoAPI.saveCredentials({ vmware: credentials });
+    // window.ezdemoAPI.saveCredentials({ vmware: credentials });
+    localStorage.setItem("vmware", JSON.stringify(credentials));
   };
 
   return (

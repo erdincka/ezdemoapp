@@ -2,6 +2,7 @@ const { app, BrowserWindow, protocol, ipcMain, shell } = require("electron");
 const path = require("path");
 const isDev = require("electron-is-dev");
 const url = require("url");
+const { platform } = require("os");
 
 // Create the native browser window.
 function createWindow() {
@@ -100,10 +101,11 @@ app.whenReady().then(() => {
   // Define IPC calls here
   const {
     ansiblePlay,
-    getCredentials,
-    saveCredentials,
-    getPrivateKey,
+    // getCredentials,
+    // saveCredentials,
+    // getPrivateKey,
     queryVcenter,
+    queryMcs,
   } = require("./apiCommands");
   ipcMain.on("ansible", ansiblePlay);
   ipcMain.on("browse", (event, link) => {
@@ -111,9 +113,11 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle("vcenter", queryVcenter);
-  ipcMain.handle("save_credentials", saveCredentials);
-  ipcMain.handle("read_credentials", getCredentials);
-  ipcMain.handle("read_privatekey", getPrivateKey);
+  ipcMain.handle("mcs", queryMcs);
+  ipcMain.handle("platform", platform);
+  // ipcMain.handle("save_credentials", saveCredentials);
+  // ipcMain.handle("read_credentials", getCredentials);
+  // ipcMain.handle("read_privatekey", getPrivateKey);
 });
 
 // Quit when all windows are closed, except on macOS.

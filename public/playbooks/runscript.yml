@@ -1,0 +1,42 @@
+---
+- name: RUNSCRIPT
+  hosts: target
+  gather_facts: false
+
+  tasks:
+    - name: Script to run
+      debug: var=script
+
+    - name: Run script "{{ script }}" # disabled - requires spark 2.4
+      shell: |
+        sudo apt install -y maven
+        [ -d finserv-application-blueprint ] || git clone http://github.com/mapr-demos/finserv-application-blueprint.git
+        cd finserv-application-blueprint; mvn clean install
+        cp ./target/nyse-taq-streaming-1.0.jar /home/mapr
+        maprcli stream info -path /user/mapr/taq || maprcli stream create -path /user/mapr/taq -produceperm p -consumeperm p -topicperm p -ttl 900
+        maprcli stream topic list -path /user/mapr/taq || maprcli stream topic create -path /user/mapr/taq -topic trades -partitions 3
+        java -cp `mapr classpath`:/home/mapr/nyse-taq-streaming-1.0.jar:/home/mapr/finserv-application-blueprint/src/test/resources com.mapr.demo.finserv.Run consumer /user/mapr/taq:trades 3 &
+        java -cp `mapr classpath`:/home/mapr/nyse-taq-streaming-1.0.jar com.mapr.demo.finserv.Run producer /home/mapr/finserv-application-blueprint/data/080449 /user/mapr/taq:trades &
+        java -cp `mapr classpath`:/home/mapr/finserv-application-blueprint/target/nyse-taq-streaming-1.0.jar com.mapr.demo.finserv.Persister -topics /user/mapr/taq:sender_0310,/user/mapr/taq:sender_0410 -table /user/mapr/ticktable -droptable -verbose &
+        java -cp `mapr classpath`:/home/mapr/nyse-taq-streaming-1.0.jar:/home/mapr/finserv-application-blueprint/src/test/resources com.mapr.demo.finserv.Run consumer /user/mapr/taq:trades 3 &
+        java -cp `mapr classpath`:/home/mapr/nyse-taq-streaming-1.0.jar com.mapr.demo.finserv.Run producer /home/mapr/finserv-application-blueprint/data/ /user/mapr/taq:trades &
+      when: script == "Stock Market Demo"
+
+    - name: Run script "Predictive Maintenance"
+      shell: |
+        echo soon
+      when: script == "Predictive Maintenance"
+
+    - name: Run script "Kafka Samples"
+      shell: |
+        echo soon
+      when: script == "Kafka Samples"
+
+    - name: Run script "Satellite Images"
+      shell: |
+        python3 ./scripts/hapi_consumer.py &
+        python3 ./scripts/hapi_producer.py
+      when: script == "Satellite Images"
+
+    - name: result
+      debug: msg="RUNSCRIPT==[]==END_RUNSCRIPT"

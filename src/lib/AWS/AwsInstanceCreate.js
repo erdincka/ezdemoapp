@@ -14,6 +14,7 @@ import {
   getAMIs,
   getKeyPairs,
   getSecurityGroups,
+  instance_user,
   waitForInstanceOk,
 } from "./ec2Client";
 
@@ -34,7 +35,8 @@ export function AwsInstanceCreate({ client, onSuccess }) {
   useEffect(() => {
     const queryAsync = async () => {
       if (client) {
-        setImages(await getAMIs(client));
+        let amis = await getAMIs(client);
+        setImages(amis);
         setKeyPairs(await getKeyPairs(client));
         setSecurityGroups(await getSecurityGroups(client));
       }
@@ -43,14 +45,17 @@ export function AwsInstanceCreate({ client, onSuccess }) {
   }, [client]);
 
   const onSubmit = async (data) => {
+    const imageSettings = { ...value, ami: images[0] };
+    // const imageSettings = value; // used when ami is selectable in the form
+    // console.dir(imageSettings);
+
     setReady(false);
-    const newInstance = await createInstance(client, data);
+    const newInstance = await createInstance(client, imageSettings);
     const instance = await waitForInstanceOk(client, newInstance);
     if (instance.PublicIpAddress) {
       setConnection({
         address: instance.PublicIpAddress,
-        username:
-          instance.PlatformDetails === "Linux/UNIX" ? "ubuntu" : "ec2-user",
+        username: instance_user(instance),
         privatekey: null,
         instance,
       });
@@ -66,10 +71,10 @@ export function AwsInstanceCreate({ client, onSuccess }) {
       onSubmit={(event) => onSubmit(event.value)}
       validate="blur"
     >
-      <FormField
+      {/* <FormField
         name="ami"
         htmlFor="ami"
-        label="Image / OS"
+        label="Simple / Full"
         required
         margin="small"
       >
@@ -78,9 +83,10 @@ export function AwsInstanceCreate({ client, onSuccess }) {
           name="ami"
           options={images || []}
           valueKey="ImageId"
-          labelKey="Name"
+          labelKey={(ami) => (ami.Name.includes("ubuntu") ? "Full" : "Simple")}
+          defaultValue={images ? images[0] : ""}
         />
-      </FormField>
+      </FormField> */}
       <FormField
         name="name"
         htmlFor="name"

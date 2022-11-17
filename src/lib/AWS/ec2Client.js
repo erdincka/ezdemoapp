@@ -1,12 +1,25 @@
+import { Redhat, Ubuntu } from "grommet-icons";
+
 const AWS = require("aws-sdk");
+
+export const instance_user = (i) =>
+  i.PlatformDetails === "Linux/UNIX" ? "ubuntu" : "ec2-user";
+
+export const instance_icon = (i) =>
+  i.PlatformDetails === "Linux/UNIX" ? (
+    <Ubuntu size="medium" color="plain" />
+  ) : (
+    <Redhat size="medium" color="plain" />
+  );
 
 const AmiParams = {
   Filters: [
     {
       Name: "name",
       Values: [
+        // "ami7.1-i3en.xlarge", // HPE AMIs
         "ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-20220914",
-        "RHEL-8.6.0_HVM-20220503-x86_64*",
+        // "RHEL-8.6.0_HVM-20220503-x86_64*",
       ],
     },
     {
@@ -15,8 +28,9 @@ const AmiParams = {
     },
   ],
   Owners: [
+    // "746013851261", // HPE AMIs
     "099720109477", // Amazon - Canonical
-    "309956199498", // Redhat
+    // "309956199498", // Redhat
   ],
 };
 
@@ -47,6 +61,7 @@ export const getAMIs = async (ec2client) => {
   if (!ec2client) return null;
   try {
     const data = await ec2client.describeImages(AmiParams).promise();
+    // console.dir(data.Images);
     return data.Images;
   } catch (error) {
     console.error(error);
@@ -180,7 +195,7 @@ export const createInstance = async (ec2client, request) => {
   if (!request) return null;
   var instanceParams = {
     ImageId: request.ami.ImageId,
-    InstanceType: "m5a.4xlarge",
+    InstanceType: "m5ad.4xlarge", //"r5ad.2xlarge",
     KeyName: request.keypair.KeyName,
     SecurityGroupIds: [request.securitygroup.GroupId],
     MinCount: 1,
@@ -194,13 +209,17 @@ export const createInstance = async (ec2client, request) => {
           VolumeType: "gp2",
         },
       },
+      // {
+      //   DeviceName: "xvdh",
+      //   Ebs: {
+      //     DeleteOnTermination: true,
+      //     VolumeSize: 100,
+      //     VolumeType: "gp2",
+      //   },
+      // },
       {
-        DeviceName: "xvdh",
-        Ebs: {
-          DeleteOnTermination: true,
-          VolumeSize: 100,
-          VolumeType: "gp2",
-        },
+        DeviceName: "/dev/sdb",
+        VirtualName: "ephemeral0",
       },
     ],
     TagSpecifications: [
@@ -247,4 +266,4 @@ export const waitForInstanceOk = async (ec2client, request) => {
 };
 
 export const getInstanceName = (instance) =>
-  instance.Tags.filter((t) => t.Key === "Name").map((t) => t.Value);
+  (instance.Tags.find((t) => t.Key === "Name") || { Value: "none" }).Value;

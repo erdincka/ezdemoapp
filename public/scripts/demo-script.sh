@@ -8,7 +8,7 @@ hadoop fs -ls /user/mapr
 hadoop fs -mkdir /user/mapr/test
 
 # Add file using posix/nfs
-echo "1" > /mapr/core.df.io/user/mapr/test/file1
+echo "1" > /mapr/my.df.io/user/mapr/test/file1
 
 # Read file using hadoop
 hadoop fs -cat /user/mapr/test/file

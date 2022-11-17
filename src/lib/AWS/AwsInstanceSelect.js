@@ -1,13 +1,19 @@
 import { Box, Button, List, Text } from "grommet";
-import { Lock, Redhat, Refresh, Server, Ubuntu } from "grommet-icons";
+import { Add, Lock, Refresh, Server } from "grommet-icons";
 import { useContext, useEffect, useState } from "react";
 import { AppContext } from "../../ContextProviders";
 import { Popup } from "../Popup";
 import { ServerConnect } from "../ServerConnect";
+import { addOrUpdate, BrowserLink } from "../Utils";
 import { AwsInstanceCreate } from "./AwsInstanceCreate";
-import { getInstances, getInstanceName } from "./ec2Client";
+import {
+  getInstances,
+  getInstanceName,
+  instance_user,
+  instance_icon,
+} from "./ec2Client";
 
-export function AwsInstanceSelect({ client, setServers }) {
+export function AwsInstanceSelect({ client, servers, setServers }) {
   const [instances, setInstances] = useState([]);
   const [popup, setPopup] = useState(false);
 
@@ -20,26 +26,30 @@ export function AwsInstanceSelect({ client, setServers }) {
     queryAsync();
   }, [client]);
 
-  const instance_user = (i) =>
-    i.PlatformDetails === "Linux/UNIX" ? "ubuntu" : "ec2-user";
-
-  const instance_icon = (i) =>
-    i.PlatformDetails === "Linux/UNIX" ? (
-      <Ubuntu size="medium" color="plain" />
-    ) : (
-      <Redhat size="medium" color="plain" />
-    );
-
   return (
     <>
-      <Box direction="row" align="center">
-        <Text weight="bold">Instances on {client.config.region}</Text>
-        {client && (
+      <Box direction="row" align="center" justify="between">
+        <Text weight="bold">
+          Eligible instances on{" "}
+          <BrowserLink
+            label={client.config.region}
+            url={`https://${client.config.region}.console.aws.amazon.com/ec2/home?region=${client.config.region}#Instances:v=3`}
+          />
+        </Text>
+        <Box direction="row">
           <Button
+            margin={{ vertical: "medium" }}
             icon={<Refresh />}
+            alignSelf="start"
             onClick={async () => setInstances(await getInstances(client))}
           />
-        )}
+          <Button
+            margin={{ vertical: "medium" }}
+            icon={<Add />}
+            alignSelf="start"
+            onClick={() => setPopup("newinstance")}
+          />
+        </Box>
       </Box>
       {instances && (
         <List
@@ -53,7 +63,7 @@ export function AwsInstanceSelect({ client, setServers }) {
                   setConnection({
                     address: item.PublicIpAddress,
                     username: instance_user(item),
-                    displayName: getInstanceName(item)[0],
+                    displayName: getInstanceName(item),
                   });
                   setPopup("serverconnect");
                 }}
@@ -70,13 +80,6 @@ export function AwsInstanceSelect({ client, setServers }) {
           )}
         </List>
       )}
-      <Button
-        margin={{ vertical: "medium" }}
-        secondary
-        label="New Instance"
-        alignSelf="start"
-        onClick={() => setPopup("newinstance")}
-      />
 
       {popup === "newinstance" && (
         <Popup
@@ -111,16 +114,21 @@ export function AwsInstanceSelect({ client, setServers }) {
               onConnect={(c) => {
                 if (c) {
                   setPopup(false);
-                  setServers((prev) => {
-                    return [
-                      ...prev,
-                      {
-                        ...c,
-                        displayName: connection.displayName,
-                        connected: true,
-                      },
-                    ];
-                  });
+                  const updatedServers = addOrUpdate(
+                    servers,
+                    "address",
+                    connection.address,
+                    {
+                      ...connection,
+                      displayName: connection.displayName,
+                      status: "connected",
+                    }
+                  );
+                  setServers(updatedServers);
+                  localStorage.setItem(
+                    "servers",
+                    JSON.stringify(updatedServers)
+                  );
                 }
               }}
             />

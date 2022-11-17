@@ -1,0 +1,121 @@
+---
+- name: DFINSTALLSIMPLE
+  hosts: target
+  gather_facts: true
+  vars:
+    cluster_name: "{{ my_cluster_name | default('my') }}.df.demo"
+    admin_password: "{{ my_admin_password | default('mapr') }}"
+    internal_hostname: "{{ groups['target'] | map ('extract', hostvars, 'ansible_fqdn') }}"
+
+  tasks:
+    - name: Ensure group "mapr" exists with correct gid
+      ansible.builtin.group:
+        name: mapr
+        state: present
+        gid: 5000
+      become: true
+
+    - name: Ensure user "mapr" exists with correct gid and groups
+      ansible.builtin.user:
+        name: mapr
+        password: "{{ admin_password | password_hash('sha512') }}"
+        shell: /bin/bash
+        home: /home/mapr
+        uid: 5000
+        group: mapr
+        groups: sudo
+        append: yes
+        expires: -1
+      become: true
+
+    - name: get available disks
+      shell: |
+        export DISKS=$(fdisk -l | grep 'Disk /dev/' | grep -v loop | cut -d' ' -f2 | tr -d :)
+        export PARTS=$(fdisk -l | grep -e '^/dev/[a-z0-9]' | cut -d' ' -f1)
+        for d in ${DISKS}; do if [[ "${PARTS}" != "$d"* ]] ; then echo $d; fi; done
+      register: disks_out
+      args:
+        executable: /bin/bash
+      become: true
+
+    - name: copy ssh key file
+      copy:
+        src: "{{ inventory_dir }}/temp.pem"
+        dest: "{{ ansible_user_dir }}/key.pem"
+        mode: "0600"
+
+    - name: copy the license
+      copy: src="{{ inventory_dir }}/LatestDemoLicense-M7.txt" dest="/tmp/LatestDemoLicense-M7.txt" mode="0644"
+      ignore_errors: true
+
+    - name: get host public IP
+      shell: "curl http://ifconfig.me"
+      register: result
+
+    - set_fact:
+        public_ip: "{{ result.stdout }}"
+        mapr_disks: "{{ disks_out.stdout_lines }}"
+
+    - name: configure data fabric
+      shell: |
+        /opt/mapr/server/mruuidgen > /opt/mapr/hostid
+        rm -f /opt/mapr/conf/hostid.*
+        cat /opt/mapr/hostid > /opt/mapr/conf/hostid.$$
+        echo "$(hostname -i) $(hostname -f) $(hostname -s)" >> /etc/hosts 
+        hostname $(hostname -f)
+        sed -i '$ d' /opt/mapr/conf/nfsserver.conf
+        echo "NfsRdmaToMfs=0" >> /opt/mapr/conf/nfsserver.conf
+        /opt/mapr/server/configure.sh -N {{ cluster_name }} -C $(hostname -i) -Z $(hostname -i) -secure -genkeys -D {{ mapr_disks | join(',')}}
+        service mapr-zookeeper start 
+        sleep 5 
+        service mapr-warden start
+      become: true
+
+    # - name: wait for MCS
+    #   wait_for:
+    #     port: 8443
+
+    - name: Wait for CLDB
+      command: jps
+      register: jps_result
+      retries: 90
+      delay: 2
+      until: jps_result.stdout | regex_search('CLDB') is not none
+      become: true
+
+    - name: create ticket for user
+      shell: "[ -f /tmp/maprticket_${UID} ] || (echo {{ admin_password }} | maprlogin password -user mapr)"
+
+    - name: create ticket for root
+      shell: "[ -f /tmp/maprticket_0 ] || (echo {{ admin_password }} | sudo maprlogin password -user mapr)"
+
+    - name: wait for CLDB to become master
+      command: sudo -u mapr maprcli dump cldbstate -json
+      register: state_result
+      retries: 90
+      delay: 2
+      until: state_result.stdout | regex_search('CLDB_IS_MASTER_READ_WRITE ') is not none
+      become: true
+
+    - name: install mapr license
+      shell: |
+        [ -f /tmp/LatestDemoLicense-M7.txt ] && maprcli license add -license /tmp/LatestDemoLicense-M7.txt -is_file true
+      ignore_errors: true
+      register: licensed
+      failed_when:
+        - licensed.rc != 0
+        - "'license exists' not in licensed.stdout"
+
+    - name: restart NFS
+      shell: |
+        sudo -u mapr maprcli node services -nodes $(hostname -i) -nfs start
+
+    - name: result
+      debug: msg="DFINSTALLSIMPLE=={{ [cluster_name] }}==END_DFINSTALLSIMPLE"
+
+    - name: update /etc/hosts on localhost
+      local_action:
+        module: ansible.builtin.lineinfile
+        path: /etc/hosts
+        line: "{{ public_ip }} {{ internal_hostname | join(' ') }}"
+      become: true

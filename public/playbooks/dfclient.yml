@@ -3,17 +3,32 @@
   hosts: target
   gather_facts: true
   vars:
-    cluster_name: "{{ my_cluster_name | default('core') }}.df.demo"
-    admin_password: "mapr"
+    # cluster_name: "{{ my_cluster_name | default('my') }}.df.demo"
+    admin_password: "{{ my_admin_password | default('mapr') }}"
+    internal_hostname: "{{ groups['target'] | map ('extract', hostvars, 'ansible_fqdn') | first }}"
 
   tasks:
+    - name: get cluster name
+      shell: "grep `hostname -f` /opt/mapr/conf/mapr-clusters.conf | cut -d' ' -f1"
+      register: result
+
+    - set_fact:
+        cluster_name: "{{ result.stdout }}"
+
+    - name: get host public IP
+      shell: "curl http://ifconfig.me"
+      register: result
+
+    - set_fact:
+        public_ip: "{{ result.stdout }}"
+
     - name: Copy scripts to home
       ansible.builtin.copy:
         src: "../scripts"
         dest: "."
         mode: u=rwx,g=r,o=r
 
-    - name: Copy script settings
+    - name: Copy script settings with parameters
       ansible.builtin.template:
         src: script_template.j2
         dest: scripts/settings.py
@@ -27,7 +42,15 @@
 
     - name: Ensure pip3 is installed
       ansible.builtin.package:
-        name: python3-pip
+        name:
+          - python3-pip
+          - build-essential
+          - libssl-dev
+          - libffi-dev
+          - python3-dev
+          - libsasl2-dev
+          - libldap2-dev
+          - default-libmysqlclient-dev
         state: present
       when: ansible_facts['os_family'] == "Debian"
       become: true
@@ -37,30 +60,57 @@
         name:
           - gcc
           - gcc-c++
+          - libffi-devel
+          - python-devel
+          - python-pip
+          - python-wheel
+          - openssl-devel
+          - cyrus-sasl-devel
+          - openldap-devel
         state: present
       when: ansible_facts['os_family'] == "RedHat"
       become: true
 
-    - name: install python libs as root
+    - name: install python packages
       shell: |
         pip3 install --global-option=build_ext --global-option="--library-dirs=/opt/mapr/lib" --global-option="--include-dirs=/opt/mapr/include/" mapr-streams-python
         pip3 install maprdb-python-client
         pip3 install hapiclient
         pip3 install protobuf==3.19.*
+        ### From https://superset.apache.org/docs/installation/installing-superset-from-scratch
+        # pip3 install apache-superset
+        # superset db upgrade
+        # export FLASK_APP=superset
+        # superset fab create-admin
+        # pip3 install sqlalchemy-drill
+        # pip3 install pyhive
+        # superset init
+        # superset run -p 8088 --with-threads --reload --debugger
       become: true
+
+    - name: refresh user credentials
+      shell: |
+        echo "{{ admin_password }}" | maprlogin password -user mapr
 
     - name: prepare resources
       shell: |
-        maprcli stream info -path mystream || maprcli stream create -path mystream -produceperm p -consumeperm p -topicperm p
-        maprcli stream topic info -path mystream -topic mytopic || maprcli stream topic create -path mystream -topic mytopic
-        [ -d /mapr/{{ cluster_name }}/user/mapr/data ] || sudo -u mapr mkdir /mapr/{{ cluster_name }}/user/mapr/data
-        [ -d /mapr/{{ cluster_name }}/user/mapr/myfiles ] || sudo -u mapr mkdir /mapr/{{ cluster_name }}/user/mapr/myfiles
-        sudo -u mapr chmod o+w /mapr/{{ cluster_name }}/user/mapr/data
+        [ -d /mapr/{{ cluster_name }}/apps/demo/data ] || sudo -u mapr mkdir -p /mapr/{{ cluster_name }}/apps/demo/data
+        maprcli stream info -path /apps/demo/stream || maprcli stream create -path /apps/demo/stream -produceperm p -consumeperm p -topicperm p
+        # maprcli stream topic info -path demostream -topic random || maprcli stream topic create -path demostream -topic random
+        # maprcli stream topic info -path demostream -topic satellite || maprcli stream topic create -path demostream -topic satellite
+        # [ -d /mapr/{{ cluster_name }}/user/mapr/data ] || sudo -u mapr mkdir /mapr/{{ cluster_name }}/user/mapr/data
+        # [ -d /mapr/{{ cluster_name }}/user/mapr/myfiles ] || sudo -u mapr mkdir /mapr/{{ cluster_name }}/user/mapr/myfiles
+        # sudo -u mapr chmod o+w /mapr/{{ cluster_name }}/user/mapr/data
 
     - name: copy examples to maprfs
-      shell: |
-        hadoop fs -mkdir scripts
-        hadoop fs -put scripts/* scripts
+      shell: hadoop fs -put -f scripts .
+
+    - name: update /etc/hosts on localhost
+      local_action:
+        module: ansible.builtin.lineinfile
+        path: /etc/hosts
+        line: "{{ public_ip }} {{ internal_hostname }}"
+      become: true
 
     - name: result
-      debug: msg="DFCLIENT=={{ [] | list }}==END_DFCLIENT"
+      debug: msg="DFCLIENT=={{ [cluster_name, internal_hostname] }}==END_DFCLIENT"

@@ -7,7 +7,7 @@ import { DataFabric } from "./DataFabric";
 import { MLOps } from "./MLOps";
 import { Home } from "./Home";
 import { DataFabricCard } from "./lib/DataFabricCard";
-import { VmCard } from "./lib/Vmware/VmCard";
+import { Story } from "./lib/Story";
 
 const router = createBrowserRouter([
   {
@@ -21,6 +21,7 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <DataFabric /> },
           { path: "/datafabric/:address", element: <DataFabricCard /> },
+          { path: "/datafabric/:address/:story", element: <Story /> },
         ],
       },
       {

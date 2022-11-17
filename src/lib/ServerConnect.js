@@ -24,10 +24,12 @@ export const ServerConnect = ({ onConnect, host, user }) => {
   const [wait, setWait] = useState(false);
 
   useEffect(() => {
-    const queryAsync = async () => {
-      setPrivatekey(await window.ezdemoAPI.getPrivateKey());
-    };
-    queryAsync();
+    // const queryAsync = async () => {
+    //   setPrivatekey(await window.ezdemoAPI.getPrivateKey());
+    // };
+    // queryAsync();
+    const savedKey = localStorage.getItem("privatekey");
+    if (savedKey) setPrivatekey(savedKey);
   }, []);
 
   // monitor output for success
@@ -45,18 +47,23 @@ export const ServerConnect = ({ onConnect, host, user }) => {
   }, [task_finished]);
 
   useEffect(() => {
-    if (connected) onConnect({ ...formValue, privatekey });
-  }, [connected, formValue, onConnect, privatekey]);
+    if (connected) {
+      setOutput([]);
+      onConnect({ ...formValue, privatekey });
+    }
+  }, [connected, formValue, onConnect, privatekey, setOutput]);
 
   const handleSubmit = ({ value }) => {
     setWait(true);
     setOutput([]);
     let newConnection = {
-      address: value.address,
-      username: value.username,
+      // clean up whitespace coming from copy-paste
+      address: value.address.replaceAll(/\s/g, ""),
+      username: value.username.replaceAll(/\s/g, ""),
       privatekey,
     };
-    runAnsible("ping", newConnection);
+    const didRun = runAnsible("ping", newConnection);
+    if (didRun) localStorage.setItem("privatekey", privatekey);
   };
 
   return (

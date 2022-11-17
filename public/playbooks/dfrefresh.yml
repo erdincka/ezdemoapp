@@ -1,0 +1,33 @@
+---
+- name: DFREFRESH
+  hosts: target
+  gather_facts: true
+  vars:
+    cluster_name: "{{ my_cluster_name | default('my') }}.df.demo"
+    admin_password: "{{ my_admin_password | default('mapr') }}"
+
+  tasks:
+    - name: get host public IP
+      shell: "curl http://ifconfig.me"
+      register: result
+
+    - set_fact:
+        public_ip: "{{ result.stdout }}"
+
+    - name: update external IP
+      shell: |
+        grep -v "MAPR_EXTERNAL" /opt/mapr/conf/env_override.sh | tee /opt/mapr/conf/env_override.sh
+        echo "export MAPR_EXTERNAL={{ public_ip }}" | tee -a /opt/mapr/conf/env_override.sh
+      become: true
+
+    - name: reconfigure cluster
+      shell: |
+        /opt/mapr/server/fsck -d /dev/nvme1n1
+        /opt/mapr/server/fsck -d /dev/nvme2n1
+        systemctl restart mapr-warden
+        sleep 30
+        /opt/mapr/server/configure.sh -R
+      become: true
+
+    - name: result
+      debug: msg="DFREFRESH=={{ [] | list }}==END_DFREFRESH"

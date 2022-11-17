@@ -23,7 +23,15 @@ import { AwsLogin } from "./AWS/AwsLogin";
 import { getAnsibleResponse } from "./getAnsibleResponse";
 import { Popup } from "./Popup";
 import { ServerConnect } from "./ServerConnect";
-import { badIcon, goodIcon, mapResources, runAnsible } from "./Utils";
+import {
+  addOrUpdate,
+  badIcon,
+  BrowserLink,
+  goodIcon,
+  mapResources,
+  runAnsible,
+  warnIcon,
+} from "./Utils";
 import { Vcenter } from "./Vmware/Vcenter";
 import { VmwareLogin } from "./Vmware/VmwareLogin";
 
@@ -55,50 +63,73 @@ export const ListServers = () => {
   }, []);
 
   useEffect(() => {
+    const ansibleTaskCanInstall = () => {
+      getAnsibleResponse(output, "dfcaninstall")
+        .then((data) => {
+          const resources = mapResources(data);
+          const status =
+            resources.length > 0 &&
+            resources.every((s) => s.name === "swap" || s.valid)
+              ? "verified"
+              : "not enough resources";
+
+          const updatedServers = addOrUpdate(
+            servers,
+            "address",
+            waitForHost.address,
+            { ...waitForHost, resources, status }
+          );
+          // update server list with resources
+          saveUpdates(updatedServers);
+        })
+        .catch((error) => {
+          setError((prev) => [...prev, error]);
+        })
+        .finally(() => {
+          setWaitForHost(false);
+        });
+    };
+    const ansibleTaskInstall = () => {
+      getAnsibleResponse(output, "dfinstall")
+        .then((data) => {
+          if (data.length > 0) {
+            // add/update cluster in the list
+            const updatedClusters = addOrUpdate(
+              JSON.parse(localStorage.getItem("clusters")),
+              "address",
+              waitForHost.address,
+              { ...waitForHost, cluster_name: data[0], status: "installed" }
+            );
+            localStorage.setItem("clusters", JSON.stringify(updatedClusters));
+            // also update the server in the list
+            const updatedServers = addOrUpdate(
+              servers,
+              "address",
+              waitForHost.address,
+              {
+                ...waitForHost,
+                status: "installed",
+              }
+            );
+            saveUpdates(updatedServers);
+          }
+        })
+        .catch((error) => {
+          setError((prev) => [...prev, error]);
+        })
+        .finally(() => {
+          setWaitForHost(false);
+        });
+    };
+
     if (waitForHost && output.length > 0) {
       switch (ansibleRunFor) {
         case "dfcaninstall":
-          getAnsibleResponse(output, "dfcaninstall")
-            .then((data) => {
-              let resources = mapResources(data);
-              // update server list with resources
-              setServers((prev) =>
-                prev.map((o) =>
-                  o.address === waitForHost.address &&
-                  o.username === waitForHost.username
-                    ? {
-                        ...waitForHost,
-                        resources,
-                      }
-                    : o
-                )
-              );
-              localStorage.setItem("servers", JSON.stringify(servers));
-            })
-            .catch((error) => {
-              setError((prev) => [...prev, error]);
-            })
-            .finally(() => {
-              setWaitForHost(false);
-            });
-
+          ansibleTaskCanInstall();
           break;
 
         case "dfinstall":
-          getAnsibleResponse(output, "dfinstall")
-            .then((data) => {
-              console.dir(data);
-              if (data[0] === waitForHost.address) {
-                // TODO: update clusters list with newly installed cluster
-              }
-            })
-            .catch((error) => {
-              setError((prev) => [...prev, error]);
-            })
-            .finally(() => {
-              setWaitForHost(false);
-            });
-
+          ansibleTaskInstall();
           break;
 
         default:
@@ -108,10 +139,28 @@ export const ListServers = () => {
   }, [ansibleRunFor, output, servers, setError, waitForHost]);
 
   const runAnsibleFor = (play, host) => {
+    host = { ...host, status: "installing" };
     setOutput([]);
+
     setWaitForHost(host);
     setAnsibleRunFor(play);
-    runAnsible(play, host);
+
+    if (runAnsible(play, host)) {
+      if (play === "dfinstall") {
+        const updatedServers = addOrUpdate(
+          servers,
+          "address",
+          host.address,
+          host
+        );
+        saveUpdates(updatedServers);
+      }
+    }
+  };
+
+  const saveUpdates = (newList) => {
+    setServers(newList);
+    localStorage.setItem("servers", JSON.stringify(newList));
   };
 
   const removeServer = (c) => {
@@ -124,14 +173,12 @@ export const ListServers = () => {
     });
   };
 
-  const hasEnoughResources = (host) =>
-    host.resources?.length > 0 &&
-    host.resources.every((s) => s.name === "swap" || s.valid);
-
   return (
     <Page>
       <PageHeader
         title="Servers"
+        subtitle="Single-node Data Fabric installation"
+        pad={{ vertical: "medium" }}
         actions={
           <Menu
             icon={<MoreVertical />}
@@ -146,46 +193,39 @@ export const ListServers = () => {
             width="medium"
           />
         }
-        pad={{ vertical: "medium" }}
       />
+
       {/* Servers List */}
       <List
         data={servers}
         action={(item, index) => (
           <Box key={index} direction="row" align="between" gap="medium">
             <Box direction="row" gap="small" align="center">
-              {waitForHost && waitForHost.address === item.address ? (
-                <Spinner />
-              ) : !item.connected ? (
-                <Tip content="Click on IP to connect">{badIcon}</Tip>
-              ) : hasEnoughResources(item) ? (
-                goodIcon
-              ) : (
-                badIcon
-              )}
-              <Anchor
-                color="text-weak"
-                onClick={() => {
-                  setConnection(item);
-                  setPopup("serverview");
-                }}
-              >
-                {waitForHost &&
-                waitForHost.address === item.address &&
-                ansibleRunFor === "dfinstall"
-                  ? "Installing..."
-                  : item.connected
-                  ? item.resources
-                    ? "Checked"
-                    : "Not checked"
-                  : "Not connected"}
-              </Anchor>
+              {item.status === "verified"
+                ? goodIcon
+                : item.status === "connected"
+                ? warnIcon
+                : badIcon}
+              <BrowserLink
+                label={item.status}
+                url={"https://" + item.address + ":9443/"}
+                disabled={
+                  !(item.status === "installed" || item.status === "installing")
+                }
+              />
             </Box>
             <Menu
-              icon={<More />}
+              icon={item.status === "installing" ? <Spinner /> : <More />}
               hoverIndicator
               items={[
                 [
+                  {
+                    label: "Connect",
+                    onClick: () => {
+                      setConnection(item);
+                      setPopup("serverconnect");
+                    },
+                  },
                   {
                     label: "Check resources",
                     onClick: () =>
@@ -197,7 +237,7 @@ export const ListServers = () => {
                   {
                     label:
                       "Install " +
-                      (clusterSettings?.cluster_name || "core") +
+                      (clusterSettings?.cluster_name || "my") +
                       ".df.demo",
                     onClick: () => {
                       setConnection(item);
@@ -218,16 +258,17 @@ export const ListServers = () => {
       >
         {(datum, index) => (
           <Box direction="row" key={index} align="center" gap="small">
-            <Text color="text-weak">{datum.displayName}</Text>
-            <Anchor
-              weight="bold"
-              onClick={() => {
-                setConnection(datum);
-                setPopup("serverconnect");
-              }}
-            >
-              {datum.address}
-            </Anchor>
+            <Tip content="Server details">
+              <Anchor
+                weight="bold"
+                onClick={() => {
+                  setConnection(datum);
+                  setPopup("serverview");
+                }}
+                label={datum.displayName}
+              />
+            </Tip>
+            <Text color="text-weak">{datum.address}</Text>
           </Box>
         )}
       </List>
@@ -239,7 +280,6 @@ export const ListServers = () => {
       {client?.vmware && (
         <Vcenter client={client.vmware} setServers={setServers} />
       )}
-
       {popup === "serverconnect" && (
         <Popup
           title="Connect"
@@ -252,7 +292,14 @@ export const ListServers = () => {
               onConnect={(c) => {
                 setPopup(false);
                 setOutput([]);
-                if (c) setServers((old) => [...old, c]);
+                const updatedServers = addOrUpdate(
+                  servers,
+                  "address",
+                  connection.address,
+                  { ...connection, status: "connected" }
+                );
+                setServers(updatedServers);
+                localStorage.setItem("servers", JSON.stringify(updatedServers));
               }}
             />
           }
@@ -289,7 +336,7 @@ export const ListServers = () => {
       {popup === "dfinstall" && (
         <Popup
           title="Confirm"
-          subtitle="Please confirm installation (30+ minutes)"
+          subtitle="Installation"
           closer={setPopup}
           content={
             <Form
@@ -299,8 +346,8 @@ export const ListServers = () => {
               onSubmit={({ value }) => {
                 runAnsibleFor("dfinstall", {
                   ...connection,
-                  my_cluster_name: value.cluster_name || "core",
-                  admin_password: value.admin_password || "mapr",
+                  my_cluster_name: value.cluster_name || "my",
+                  my_admin_password: value.admin_password || "mapr",
                 });
                 setPopup(false);
               }}
@@ -338,6 +385,7 @@ export const ListServers = () => {
           }
         />
       )}
+
       {popup === "aws" && (
         <Popup
           title="Sign in"

@@ -21,11 +21,15 @@ import os
 ### CONFIGURE
 from settings import *
 
+table_name = "random"
+topic_name = "random"
+folder_name = "data"
+
 # Create a connection to the table via OJAI
-connection_str = "{}:5678?auth=basic;user=mapr;password=mapr;" \
+connection_str = "{}:5678?auth=basic;user=mapr;password={};" \
     "ssl=true;" \
     "sslCA=/opt/mapr/conf/ssl_truststore.pem;" \
-    "sslTargetNameOverride={}".format(internal_hostname, internal_hostname)
+    "sslTargetNameOverride={}".format(internal_hostname, admin_password, internal_hostname)
 connection = ConnectionFactory.get_connection(connection_str=connection_str)
 
 # Get a store and assign it as a DocumentStore object
@@ -46,20 +50,22 @@ def updateTable(json_dict):
     # create psudo file
     # os.system("hadoop fs -touchz myfiles/{}".format(data['file_path']))
     # this one is faster
-    os.system("sudo -u mapr touch /mapr/{}/user/mapr/{}/{}".format(cluster_name, folder_name, data['file_path']))
+    os.system("sudo -u mapr touch /mapr/{}/apps/demo/{}/{}".format(cluster_name, folder_name, data['file_path']))
 
 
 # Subscribe to the topic
 c = Consumer({'group.id': 'mygroup',
               'default.topic.config': {'auto.offset.reset': 'earliest'}})
-c.subscribe(['/user/mapr/{}:{}'.format(stream_name, topic_name)])
+c.subscribe(['{}:{}'.format(stream_name, topic_name)])
 
 index = 0
-running = True
+duration = 600
+delay = 1.0
+
 print('polling topic {} for messages'.format(topic_name))
 
-while running:
-  msg = c.poll(timeout=1.0)
+while index < (duration / delay):
+  msg = c.poll(timeout=delay)
   if msg is None: continue
   if not msg.error():
     data = msg.value().decode('utf-8')
@@ -68,4 +74,6 @@ while running:
     index += 1
   elif msg.error().code() != KafkaError._PARTITION_EOF:
     print(msg.error())
-    running = False
+    break
+
+handler()

@@ -1,8 +1,7 @@
 #!/usr/bin/python3
 
 ### TEMPLATE
-cluster_name = "{{ cluster_name | default('core.df.demo') }}"
+cluster_name = "{{ cluster_name | default('my.df.demo') }}"
 internal_hostname = "{{ groups['target'] | map ('extract', hostvars, 'ansible_fqdn') | first }}"
-stream_name = "mystream"
-topic_name = "mytopic"
-table_name = "mytable"
+admin_password = "{{ admin_password }}"
+stream_name = "/apps/demo/stream"
