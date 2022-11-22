@@ -101,6 +101,13 @@
         "filter": [
           "**/*"
         ]
+      },
+      {
+        "from": "./public/scripts",
+        "to": "scripts",
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "publish": [
@@ -108,8 +115,15 @@
     ],
     "mac": {
       "icon": "public/icons/icon.icns",
-      "target": "dmg",
-      "defaultArch": "universal"
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ]
     },
     "win": {
       "icon": "public/icons/logo512_sq.png",
