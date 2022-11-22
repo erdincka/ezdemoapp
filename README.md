@@ -28,6 +28,8 @@ Download from [release page](https://github.com/erdincka/ezdemoapp/releases).
 
 Start the app EzDemo (wherever it is installed).
 
+See [Usage](./USAGE.md).
+
 ## Known issues
 
 [ ] Windows app might fail with fcntl error, as a workaround use linux subsystem if possible
