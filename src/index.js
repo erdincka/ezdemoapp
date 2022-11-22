@@ -1,6 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { createHashRouter, RouterProvider } from "react-router-dom";
 import ErrorPage from "./error-page";
 import { App } from "./App";
 import { DataFabric } from "./DataFabric";
@@ -9,7 +9,7 @@ import { Home } from "./Home";
 import { DataFabricCard } from "./lib/DataFabricCard";
 import { Story } from "./lib/Story";
 
-const router = createBrowserRouter([
+const router = createHashRouter([
   {
     path: "/",
     element: <App />,

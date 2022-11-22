@@ -38,9 +38,7 @@ export const GlobalFooter = () => {
           <Button
             key={index}
             label={button.label}
-            href={button.href}
-            rel="noopener"
-            target="_blank"
+            onClick={() => window.ezdemoAPI.openInBrowser(button.href)}
           />
         ))}
       </Box>

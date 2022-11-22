@@ -1,6 +1,6 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "Ezdemo App",
+  "name": "HPE Demo app for Ezmeral",
   "icons": [
     {
       "src": "icons/logo.ico",

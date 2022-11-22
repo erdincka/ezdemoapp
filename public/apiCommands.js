@@ -7,7 +7,6 @@ const {
   vmwareGet,
   mcsPost,
   mcsGet,
-  mcsSession,
 } = require("./lib/restclient");
 
 const playbook_dir = isDev

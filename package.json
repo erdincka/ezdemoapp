@@ -7,7 +7,7 @@
   "license": "MIT",
   "productName": "EzDemo",
   "description": "Learn and Demo HPE Ezmeral",
-  "version": "0.1.1-b",
+  "version": "0.1.2",
   "private": false,
   "main": "./public/electron.js",
   "homepage": "./",
@@ -30,7 +30,7 @@
     "dev": "concurrently -k \"BROWSER=none yarn start\" \"yarn:electron\"",
     "electron": "electronmon .",
     "postinstall": "electron-builder install-app-deps",
-    "release": "electron-builder -wlm -p always"
+    "release": ". ./gh-token.sh && electron-builder -wlm -p always"
   },
   "eslintConfig": {
     "extends": [
