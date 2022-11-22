@@ -9,7 +9,7 @@ const hpe = {
 };
 
 export const AppIdentity = forwardRef(
-  ({ brand, href, logoOnly, title, ...rest }, ref) => {
+  ({ brand, logoOnly, title, ...rest }, ref) => {
     const size = useContext(ResponsiveContext);
 
     return (
@@ -18,7 +18,7 @@ export const AppIdentity = forwardRef(
         direction="row"
         gap={!["xsmall", "small"].includes(size) ? "medium" : "small"}
       >
-        <Button href={href} ref={ref} {...rest} plain>
+        <Button ref={ref} {...rest} plain>
           <Box
             direction="row"
             align="center"

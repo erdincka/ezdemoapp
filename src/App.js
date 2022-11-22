@@ -1,15 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Grommet, Button, Box } from "grommet";
 import { hpe } from "grommet-theme-hpe";
-import {
-  Console,
-  Book,
-  Moon,
-  Sun,
-  Code,
-  AppsRounded,
-  Refresh,
-} from "grommet-icons";
+import { Console, Book, Moon, Sun, Code, AppsRounded } from "grommet-icons";
 import { GlobalHeader } from "./Header";
 import { GlobalFooter } from "./Footer";
 import { AppContext } from "./ContextProviders";
@@ -59,10 +51,6 @@ export function App() {
     [learning, output, error, connection, debug, client]
   );
 
-  const reset = () => {
-    setConnection({});
-    setClient({});
-  };
   // Component functions
   const themeButton = (
     <Button
@@ -91,21 +79,10 @@ export function App() {
     />
   );
 
-  const refreshButton = (
-    <Button
-      tip="Reset"
-      key="reset"
-      icon={<Refresh />}
-      onClick={reset} // reset the connection & client - should take everything to beginning
-    />
-  );
-
   return (
     <Grommet theme={hpe} themeMode={theme} full>
       <AppContext.Provider value={contextValue}>
-        <GlobalHeader
-          buttons={[refreshButton, debugButton, modeButton, themeButton]}
-        />
+        <GlobalHeader buttons={[debugButton, modeButton, themeButton]} />
         {errorBar(error, setError)}
         <Box width={{ width: "100%" }} height={{ min: "82%" }} margin="auto">
           <Outlet />

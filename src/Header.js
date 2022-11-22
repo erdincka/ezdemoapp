@@ -17,7 +17,7 @@ export const GlobalHeader = ({ buttons }) => {
         vertical: "small",
       }}
     >
-      <AppIdentity title="Ezdemo" brand="hpe" href="/" />
+      <AppIdentity title="Ezdemo" brand="hpe" />
       <Box direction="row">{buttons}</Box>
     </Header>
   );
