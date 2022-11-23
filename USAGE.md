@@ -54,7 +54,10 @@ Refresh clusters if not updated
 Configure cluster (client libraries and example scripts)
 ![Configure Cluster](./images/17-cluster-configure.jpg)
 
-Enter the cluster screen (click on cluster name) and select a use case (UNDER DEVELOPMENT)
+Click on cluster name and you will get links to component UI pages
+![Run use case](./images/20-cluster-links.jpg)
+
+Select a use case (UNDER DEVELOPMENT)
 ![Select use case](./images/18-usecase-select.jpg)
 
 Run the use case (UNDER DEVELOPMENT)
